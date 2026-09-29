@@ -3831,12 +3831,19 @@ td.danger {
 }
 .berth-plan-drawer .field-check {
     display: flex;
-    flex-direction: row-reverse !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
     min-height: auto;
     padding: 0.35rem 0.5rem !important;
-    white-space: normal;
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.berth-plan-drawer .field-check span {
+    white-space: nowrap !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .berth-plan-drawer .field-check input[type="checkbox"] {
     align-self: auto;

@@ -14,3 +14,4 @@ dist/
 .vercelignore
 vercel.json
 .netlify/
+.vercel

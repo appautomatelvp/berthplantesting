@@ -3830,22 +3830,29 @@ td.danger {
     gap: 0.4rem;
 }
 .berth-plan-drawer .field-check {
-    display: flex;
+    display: flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
-    min-height: auto;
-    padding: 0.35rem 0.5rem !important;
-    white-space: nowrap !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0.6rem 0.8rem !important;
 }
 .berth-plan-drawer .field-check span {
+    flex: 1 1 auto !important;
     white-space: nowrap !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    text-align: left !important;
+    margin-right: 1rem !important;
 }
 .berth-plan-drawer .field-check input[type="checkbox"] {
-    align-self: auto;
+    flex: 0 0 auto !important;
     margin: 0 !important;
+    align-self: center !important;
+}
+.berth-plan-drawer .field-check-grid.drawer-checks {
+    width: 100% !important;
+    display: grid !important;
+    justify-items: stretch !important;
 }

@@ -25,6 +25,7 @@ const GROUPS = [
 const STEPS = ['s1', 's2', 's3', 's4'];
 
 export default function Guide({ model }) {
+  const [activeSection, setActiveSection] = React.useState('');
   const { t } = useI18n();
   const { terminal, metrics, services, lockZones, externalBerths, ui } = model;
   const period = reportPeriodOf(ui?.horizon || ui?.timeScale || 'week');
@@ -63,9 +64,9 @@ export default function Guide({ model }) {
           <button
             key={id}
             type="button"
-            className="chip"
+            className={`chip ${activeSection === id ? 'active' : ''}`}
             data-tip={t('tip.jump')}
-            onClick={() => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            onClick={() => { setActiveSection(id); document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
           >
             {t(key)}
           </button>
@@ -76,7 +77,7 @@ export default function Guide({ model }) {
         <p className="hint">{t('guide.subtitle')}</p>
       </section>
 
-      <section id="guide-defs" className="panel span-12">
+      <section id="guide-defs" className={`panel span-12 ${activeSection === 'guide-defs' ? 'active-section' : ''}`}>
         <h3>{t('guide.defTitle')}</h3>
         {GROUPS.map((group) => (
           <div key={group.id} className="guide-group">
@@ -120,7 +121,7 @@ export default function Guide({ model }) {
         )}
       </section>
 
-      <section id="guide-logic" className="panel span-7">
+      <section id="guide-logic" className={`panel span-7 ${activeSection === 'guide-logic' ? 'active-section' : ''}`}>
         <h3>{t('guide.logicTitle')}</h3>
         <ol className="guide-steps">
           {STEPS.map((id, i) => (
@@ -135,7 +136,7 @@ export default function Guide({ model }) {
         </ol>
       </section>
 
-      <section id="guide-live" className="panel span-5">
+      <section id="guide-live" className={`panel span-5 ${activeSection === 'guide-live' ? 'active-section' : ''}`}>
         <h3>{t('guide.live')}</h3>
         <div className="dash-metric-list">
           <div>
@@ -178,6 +179,7 @@ export default function Guide({ model }) {
         <ul className="guide-modules">
           <li>{t('guide.modules.plan')}</li>
           <li>{t('guide.modules.dash')}</li>
+          <li>{t('guide.modules.settings')}</li>
           <li>{t('guide.modules.external')}</li>
         </ul>
       </section>

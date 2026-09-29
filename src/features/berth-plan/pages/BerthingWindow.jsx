@@ -1279,7 +1279,7 @@ export default function BerthingWindow({ model }) {
                 <div className="drawer-head">
                   <h2>{t('window.toolGroup.cranes')}</h2>
                   <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} âœ•
+                    {t('window.closeEditor')} ?
                   </button>
                 </div>
                 <CraneManager
@@ -1298,7 +1298,7 @@ export default function BerthingWindow({ model }) {
                 <div className="drawer-head">
                   <h2>{t('window.toolGroup.locks')}</h2>
                   <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} âœ•
+                    {t('window.closeEditor')} ?
                   </button>
                 </div>
                 <LockZoneManager
@@ -1318,7 +1318,7 @@ export default function BerthingWindow({ model }) {
                 <div className="drawer-head">
                   <h2>{t('window.toolGroup.labels')}</h2>
                   <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} âœ•
+                    {t('window.closeEditor')} ?
                   </button>
                 </div>
                 <div className="block-fields-config">
@@ -1387,8 +1387,8 @@ export default function BerthingWindow({ model }) {
               <div className="drawer-head">
                 <h2>{t('window.selected')}</h2>
                 <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                  {t('window.closeEditor')} âœ•
-                </button>
+                  {t('window.closeEditor')} ?
+                  </button>
               </div>
               <div className="field-grid single">
                 <label>

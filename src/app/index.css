@@ -3833,3 +3833,8 @@ td.danger {
     justify-content: space-between !important;
     flex-direction: row-reverse !important;
 }
+.plan-editor-drawer,
+.active-section {
+    border: 1px solid rgba(45, 212, 191, 0.45) !important;
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.05) !important;
+}

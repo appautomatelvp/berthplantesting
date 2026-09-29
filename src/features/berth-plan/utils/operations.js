@@ -1,8 +1,8 @@
-﻿/**
+/**
  * V1 operational logic shared by the guide, dashboard, berth plan, and external berths.
  * Meter-hours stay on the same definitions as the capacity engine.
  *
- * Available capacity = quay Ã— hours âˆ’ maintenance downtime
+ * Available capacity = quay × hours − maintenance downtime
  * Mother vessels are placed first
  * Barge windows fill leftover meter-time gaps
  * Spill-over suggests an external berth when BOR or anchorage exposure crosses the trigger
@@ -47,7 +47,7 @@ function unitMix(seed) {
   return (h >>> 0) / 4294967295;
 }
 
-/** Â±percent for a repeated fixed line. Week 0 stays on the proforma the user typed. */
+/** ±percent for a repeated fixed line. Week 0 stays on the proforma the user typed. */
 export function repeatSwing(weekIndex, pct) {
   const p = Math.min(100, Math.max(0, Number(pct) || 0)) / 100;
   if (!weekIndex || p <= 0) return 1;

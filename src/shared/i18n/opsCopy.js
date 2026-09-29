@@ -235,8 +235,9 @@ export const guideEn = {
   formulaBor: 'BOR {bor} = assigned meter-hours / clean available',
   modulesTitle: 'Where each module lives',
   modules: {
-    plan: 'BERTH PLAN — drag mother vessels, block maintenance, layer barge windows.',
+    plan: 'BERTH PLAN — drag mother vessels, block maintenance (toolbar), customize block labels, layer barge windows.',
     dash: 'Dashboard — week / month / quarter / year, heatmap, erosion, service and speed trends, punctuality.',
+    settings: 'Settings — configure quay length, BOR parameters, and display axis.',
     external: 'External Berth — hire catalog and the spill-over suggestion.',
   },
 };
@@ -325,8 +326,9 @@ export const guideVi = {
   formulaBor: 'BOR {bor} = mét-giờ đã gán / mét-giờ sạch',
   modulesTitle: 'Mỗi module nằm ở đâu',
   modules: {
-    plan: 'BERTH PLAN — kéo thả tàu mẹ, khóa bảo trì, tách lớp cửa sổ xà lan.',
+    plan: 'BERTH PLAN — kéo thả tàu mẹ, khóa bảo trì (toolbar), tùy chỉnh nhãn khối (toolbar), và các công cụ cầu.',
     dash: 'Dashboard — tuần / tháng / quý / năm, heatmap, ăn mòn công suất, xu hướng tuyến, tốc độ cảng và độ trễ tàu.',
+    settings: 'Cài đặt (Settings) — cấu hình chiều dài cầu, tham số BOR, và thiết lập mốc hiển thị.',
     external: 'Bến thuê ngoài — danh mục giá và gợi ý spill-over.',
   },
 };

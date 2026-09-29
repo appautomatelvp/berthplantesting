@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useI18n } from '../../../shared/i18n/I18nContext';
 import { IconBarge } from '../../../shared/components/icons/PortIcons';
@@ -6,18 +6,18 @@ import { DAY_KEYS } from '../../berth-plan/utils/operations';
 import ChartTip from '../../berth-plan/components/ChartTip';
 
 function fmt(n, d = 0) {
-  if (!Number.isFinite(n)) return 'â€”';
+  if (!Number.isFinite(n)) return '—';
   return n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
 }
 
 function pct(n, d = 1) {
-  if (!Number.isFinite(n)) return 'â€”';
+  if (!Number.isFinite(n)) return '—';
   return `${(n * 100).toFixed(d)}%`;
 }
 
 export function formatVnd(n) {
-  if (!Number.isFinite(n)) return 'â€”';
-  return `${Math.round(n).toLocaleString('vi-VN')} â‚«`;
+  if (!Number.isFinite(n)) return '—';
+  return `${Math.round(n).toLocaleString('vi-VN')} ₫`;
 }
 
 function niceMax(v) {
@@ -112,8 +112,8 @@ function LineChart({ labels, series, height = 180 }) {
 
 function SpillBody({ spill, t }) {
   const call = spill.call;
-  const vessel = call?.vesselName || call?.service || 'â€”';
-  const service = call?.service || 'â€”';
+  const vessel = call?.vesselName || call?.service || '—';
+  const service = call?.service || '—';
   const berthName = spill.berth?.name || t('ops.noBerth');
   const vars = {
     bor: pct(spill.bor),
@@ -145,7 +145,7 @@ export function SpillBanner({ spill }) {
           <h3>{title}</h3>
           <p>{SpillBody({ spill, t })}</p>
           <p className="hint">
-            {t('ops.geometricWait')}: {fmt(spill.geometricWait, 1)} h Â· {t('ops.exposure')}:{' '}
+            {t('ops.geometricWait')}: {fmt(spill.geometricWait, 1)} h · {t('ops.exposure')}:{' '}
             {fmt(spill.exposureHours, 1)} h
           </p>
         </div>
@@ -240,7 +240,7 @@ export function Heatmap({ heatmap }) {
                     setHover({
                       x: event.clientX,
                       y: event.clientY,
-                      title: `${t('ops.heatmapWeek', { n: week })} Â· ${t(`daysFull.${c.day}`)}`,
+                      title: `${t('ops.heatmapWeek', { n: week })} · ${t(`daysFull.${c.day}`)}`,
                       rows: [{ label: 'BOR', color: c.band === 'hot' ? '#ef4444' : c.band === 'warm' ? '#f59e0b' : '#14b8a6', value: pct(c.bor) }],
                     })
                   }
@@ -373,7 +373,7 @@ export function TrendSection({ ops }) {
         {selected && (
           <>
             <p className="hint">
-              {t('ops.delta')}: {t('ops.volume')} {pct(selected.volumeDelta)} Â· {t('ops.portstay')}{' '}
+              {t('ops.delta')}: {t('ops.volume')} {pct(selected.volumeDelta)} · {t('ops.portstay')}{' '}
               {pct(selected.portstayDelta)}
             </p>
             <div className="area-chart-grid">
@@ -409,7 +409,7 @@ export function TrendSection({ ops }) {
         {speed && (
           <>
             <p className="hint">
-              CMPH {pct(speed.cmphDelta)} Â· PMPH {pct(speed.pmphDelta)}
+              CMPH {pct(speed.cmphDelta)} · PMPH {pct(speed.pmphDelta)}
             </p>
             <div className="area-chart-card">
               <LineChart

@@ -1,4 +1,4 @@
-﻿import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import { CRANE_WIDTH_M, clampCranePosition } from '../../berth-plan/utils/crane.js';
 import { withServiceColors } from '../../berth-plan/utils/serviceColor.js';
 
@@ -37,7 +37,7 @@ export function parseNumber(value) {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (value == null) return null;
   let s = String(value).trim().replace(/\s/g, '');
-  if (!s || s === '-' || s === 'â€”') return null;
+  if (!s || s === '-' || s === '—') return null;
   if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
   else if (/^\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g, '');
   else if (s.includes(',') && s.includes('.')) {
@@ -125,111 +125,111 @@ export function parseTime(value) {
 function fieldCatalog(locale) {
   const t = (vi, en) => text(locale, vi, en);
   const ratio = t(
-    'Nháº­p sá»‘ tháº­p phÃ¢n tá»« 0 Ä‘áº¿n 1. VÃ­ dá»¥ 0,1 nghÄ©a lÃ  10%. KhÃ´ng nháº­p 10 vÃ  khÃ´ng gÃµ dáº¥u %.',
+    'Nhập số thập phân từ 0 đến 1. Ví dụ 0,1 nghĩa là 10%. Không nhập 10 và không gõ dấu %.',
     'Enter a decimal from 0 to 1. Example: 0.1 means 10%. Do not enter 10 and do not type %.'
   );
   const pct = t(
-    'Nháº­p sá»‘ pháº§n trÄƒm tá»« 0 Ä‘áº¿n 100. VÃ­ dá»¥ 60 nghÄ©a lÃ  60%. KhÃ´ng nháº­p 0,6.',
+    'Nhập số phần trăm từ 0 đến 100. Ví dụ 60 nghĩa là 60%. Không nhập 0,6.',
     'Enter a percent from 0 to 100. Example: 60 means 60%. Do not enter 0.6.'
   );
   const hours = t(
-    'Sá»‘ giá», dÃ¹ng dáº¥u cháº¥m tháº­p phÃ¢n náº¿u cáº§n. VÃ­ dá»¥ 0,5 lÃ  30 phÃºt. KhÃ´ng gÃµ chá»¯ "giá»".',
+    'Số giờ, dùng dấu chấm thập phân nếu cần. Ví dụ 0,5 là 30 phút. Không gõ chữ "giờ".',
     'Hours. Use a decimal if needed. Example: 0.5 is 30 minutes. Do not type the word "hours".'
   );
-  const meters = t('Sá»‘ mÃ©t. Chá»‰ nháº­p sá»‘, vÃ­ dá»¥ 600.', 'Meters. Enter a number only, for example 600.');
+  const meters = t('Số mét. Chỉ nhập số, ví dụ 600.', 'Meters. Enter a number only, for example 600.');
   return [
     {
       code: 'terminal.name',
-      group: t('Cáº§u chÃ­nh', 'Main quay'),
-      name: t('TÃªn terminal', 'Terminal name'),
-      unit: t('chá»¯', 'text'),
+      group: t('Cầu chính', 'Main quay'),
+      name: t('Tên terminal', 'Terminal name'),
+      unit: t('chữ', 'text'),
       kind: 'text',
-      note: t('TÃªn hiá»ƒn thá»‹ trÃªn Ä‘áº§u há»‡ thá»‘ng. KhÃ´ng Ä‘á»ƒ trá»‘ng.', 'Shown in the header. Required.'),
+      note: t('Tên hiển thị trên đầu hệ thống. Không để trống.', 'Shown in the header. Required.'),
     },
     {
       code: 'terminal.quayLength',
-      group: t('Cáº§u chÃ­nh', 'Main quay'),
-      name: t('Chiá»u dÃ i cáº§u chÃ­nh', 'Main quay length'),
+      group: t('Cầu chính', 'Main quay'),
+      name: t('Chiều dài cầu chính', 'Main quay length'),
       unit: 'm',
       kind: 'number',
       min: 50,
       max: 5000,
       note: t(
-        'DÃ¹ng Ä‘á»ƒ tÃ­nh mÃ©t-giá» kháº£ dá»¥ng = chiá»u dÃ i cáº§u Ã— ngÃ y lÃ m viá»‡c/nÄƒm Ã— giá»/ngÃ y, vÃ  lÃ m trá»¥c mÃ©t trÃªn BERTH PLAN. ' + meters,
-        'Used for available meter-hours = quay length Ã— working days/year Ã— hours/day, and as the BERTH PLAN meter axis. ' + meters
+        'Dùng để tính mét-giờ khả dụng = chiều dài cầu × ngày làm việc/năm × giờ/ngày, và làm trục mét trên BERTH PLAN. ' + meters,
+        'Used for available meter-hours = quay length × working days/year × hours/day, and as the BERTH PLAN meter axis. ' + meters
       ),
     },
     {
       code: 'terminal.workingDaysPerYear',
-      group: t('Lá»‹ch lÃ m viá»‡c', 'Working calendar'),
-      name: t('Sá»‘ ngÃ y lÃ m viá»‡c / nÄƒm', 'Working days / year'),
-      unit: t('ngÃ y', 'days'),
+      group: t('Lịch làm việc', 'Working calendar'),
+      name: t('Số ngày làm việc / năm', 'Working days / year'),
+      unit: t('ngày', 'days'),
       kind: 'number',
       min: 1,
       max: 366,
-      note: t('Máº«u sá»‘ mÃ©t-giá» nÄƒm. ThÆ°á»ng lÃ  365.', 'Yearly meter-hour denominator. Usually 365.'),
+      note: t('Mẫu số mét-giờ năm. Thường là 365.', 'Yearly meter-hour denominator. Usually 365.'),
     },
     {
       code: 'terminal.workingHoursPerDay',
-      group: t('Lá»‹ch lÃ m viá»‡c', 'Working calendar'),
-      name: t('Sá»‘ giá» lÃ m viá»‡c / ngÃ y', 'Working hours / day'),
-      unit: t('giá»', 'h'),
+      group: t('Lịch làm việc', 'Working calendar'),
+      name: t('Số giờ làm việc / ngày', 'Working hours / day'),
+      unit: t('giờ', 'h'),
       kind: 'number',
       min: 1,
       max: 24,
-      note: t('ThÆ°á»ng lÃ  24 náº¿u cáº§u hoáº¡t Ä‘á»™ng xuyÃªn ngÃ y.', 'Usually 24 when the quay works around the clock.'),
+      note: t('Thường là 24 nếu cầu hoạt động xuyên ngày.', 'Usually 24 when the quay works around the clock.'),
     },
     {
       code: 'terminal.workingWeeksPerYear',
-      group: t('Lá»‹ch lÃ m viá»‡c', 'Working calendar'),
-      name: t('Sá»‘ tuáº§n lÃ m viá»‡c / nÄƒm', 'Working weeks / year'),
-      unit: t('tuáº§n', 'weeks'),
+      group: t('Lịch làm việc', 'Working calendar'),
+      name: t('Số tuần làm việc / năm', 'Working weeks / year'),
+      unit: t('tuần', 'weeks'),
       kind: 'number',
       min: 1,
       max: 53,
-      note: t('DÃ¹ng khi quy tuáº§n ra nÄƒm. ThÆ°á»ng lÃ  52.', 'Used to annualize a week. Usually 52.'),
+      note: t('Dùng khi quy tuần ra năm. Thường là 52.', 'Used to annualize a week. Usually 52.'),
     },
     {
       code: 'terminal.workingDaysPerWeek',
-      group: t('Lá»‹ch lÃ m viá»‡c', 'Working calendar'),
-      name: t('Sá»‘ ngÃ y tÃ­nh BOR / tuáº§n', 'Days in the BOR week'),
-      unit: t('ngÃ y', 'days'),
+      group: t('Lịch làm việc', 'Working calendar'),
+      name: t('Số ngày tính BOR / tuần', 'Days in the BOR week'),
+      unit: t('ngày', 'days'),
       kind: 'number',
       min: 1,
       max: 7,
       note: t(
-        'Máº«u sá»‘ BOR theo tuáº§n = chiá»u dÃ i cáº§u Ã— sá»‘ ngÃ y nÃ y Ã— giá»/ngÃ y. ThÆ°á»ng lÃ  7.',
-        'Weekly BOR denominator = quay length Ã— this number Ã— hours/day. Usually 7.'
+        'Mẫu số BOR theo tuần = chiều dài cầu × số ngày này × giờ/ngày. Thường là 7.',
+        'Weekly BOR denominator = quay length × this number × hours/day. Usually 7.'
       ),
     },
     {
       code: 'metrics.bargeVesselVolumeRatio',
-      group: t('SÃ  lan', 'Barge'),
-      name: t('Tá»· lá»‡ sáº£n lÆ°á»£ng sÃ  lan / tÃ u', 'Barge / vessel volume ratio'),
-      unit: t('tá»· lá»‡ 0â€“1', 'ratio 0â€“1'),
+      group: t('Sà lan', 'Barge'),
+      name: t('Tỷ lệ sản lượng sà lan / tàu', 'Barge / vessel volume ratio'),
+      unit: t('tỷ lệ 0–1', 'ratio 0–1'),
       kind: 'number',
       min: 0,
       max: 5,
       note: t(
-        'Sáº£n lÆ°á»£ng sÃ  lan = sáº£n lÆ°á»£ng tuyáº¿n chÃ­nh Ã— tá»· lá»‡ nÃ y. 0,63 nghÄ©a lÃ  sÃ  lan báº±ng 63% sáº£n lÆ°á»£ng tÃ u. KhÃ´ng nháº­p 63.',
-        'Barge volume = mainline volume Ã— this ratio. 0.63 means barges equal 63% of vessel volume. Do not enter 63.'
+        'Sản lượng sà lan = sản lượng tuyến chính × tỷ lệ này. 0,63 nghĩa là sà lan bằng 63% sản lượng tàu. Không nhập 63.',
+        'Barge volume = mainline volume × this ratio. 0.63 means barges equal 63% of vessel volume. Do not enter 63.'
       ),
     },
     {
       code: 'metrics.vesselArrivalHrs',
-      group: t('TÃ u máº¹', 'Mother vessel'),
-      name: t('Giá» manoeuvre cáº­p â€” tÃ u', 'Vessel arrival maneuver'),
-      unit: t('giá»', 'h'),
+      group: t('Tàu mẹ', 'Mother vessel'),
+      name: t('Giờ manoeuvre cập — tàu', 'Vessel arrival maneuver'),
+      unit: t('giờ', 'h'),
       kind: 'number',
       min: 0,
       max: 48,
-      note: hours + ' ' + t('Cá»™ng vÃ o giá» chiáº¿m cáº§u cá»§a má»—i chuyáº¿n tÃ u.', 'Added to berth hours of each vessel call.'),
+      note: hours + ' ' + t('Cộng vào giờ chiếm cầu của mỗi chuyến tàu.', 'Added to berth hours of each vessel call.'),
     },
     {
       code: 'metrics.vesselDepartureHrs',
-      group: t('TÃ u máº¹', 'Mother vessel'),
-      name: t('Giá» manoeuvre rá»i â€” tÃ u', 'Vessel departure maneuver'),
-      unit: t('giá»', 'h'),
+      group: t('Tàu mẹ', 'Mother vessel'),
+      name: t('Giờ manoeuvre rời — tàu', 'Vessel departure maneuver'),
+      unit: t('giờ', 'h'),
       kind: 'number',
       min: 0,
       max: 48,
@@ -237,9 +237,9 @@ function fieldCatalog(locale) {
     },
     {
       code: 'metrics.bargeArrivalHrs',
-      group: t('SÃ  lan', 'Barge'),
-      name: t('Giá» manoeuvre cáº­p â€” sÃ  lan', 'Barge arrival maneuver'),
-      unit: t('giá»', 'h'),
+      group: t('Sà lan', 'Barge'),
+      name: t('Giờ manoeuvre cập — sà lan', 'Barge arrival maneuver'),
+      unit: t('giờ', 'h'),
       kind: 'number',
       min: 0,
       max: 48,
@@ -247,28 +247,28 @@ function fieldCatalog(locale) {
     },
     {
       code: 'metrics.bargeDepartureHrs',
-      group: t('SÃ  lan', 'Barge'),
-      name: t('Giá» manoeuvre rá»i â€” sÃ  lan', 'Barge departure maneuver'),
-      unit: t('giá»', 'h'),
+      group: t('Sà lan', 'Barge'),
+      name: t('Giờ manoeuvre rời — sà lan', 'Barge departure maneuver'),
+      unit: t('giờ', 'h'),
       kind: 'number',
       min: 0,
       max: 48,
-      note: hours + ' ' + t('CÃ³ thá»ƒ nháº­p 0 náº¿u sÃ  lan rá»i khÃ´ng tÃ­nh thÃªm giá».', 'Enter 0 when departure adds no extra time.'),
+      note: hours + ' ' + t('Có thể nhập 0 nếu sà lan rời không tính thêm giờ.', 'Enter 0 when departure adds no extra time.'),
     },
     {
       code: 'metrics.bargeCallsPerWeek',
-      group: t('SÃ  lan', 'Barge'),
-      name: t('Sá»‘ lÆ°á»£t sÃ  lan trung bÃ¬nh / tuáº§n', 'Average barge calls / week'),
-      unit: t('lÆ°á»£t', 'calls'),
+      group: t('Sà lan', 'Barge'),
+      name: t('Số lượt sà lan trung bình / tuần', 'Average barge calls / week'),
+      unit: t('lượt', 'calls'),
       kind: 'number',
       min: 0,
       max: 10000,
-      note: t('Sá»‘ nguyÃªn hoáº·c sá»‘ tháº­p phÃ¢n. DÃ¹ng Ä‘á»ƒ tÃ­nh mÃ©t-giá» sÃ  lan trong tuáº§n.', 'Integer or decimal. Used for weekly barge meter-hours.'),
+      note: t('Số nguyên hoặc số thập phân. Dùng để tính mét-giờ sà lan trong tuần.', 'Integer or decimal. Used for weekly barge meter-hours.'),
     },
     {
       code: 'metrics.bargeLoa',
-      group: t('SÃ  lan', 'Barge'),
-      name: t('LOA trung bÃ¬nh sÃ  lan', 'Average barge LOA'),
+      group: t('Sà lan', 'Barge'),
+      name: t('LOA trung bình sà lan', 'Average barge LOA'),
       unit: 'm',
       kind: 'number',
       min: 1,
@@ -277,54 +277,54 @@ function fieldCatalog(locale) {
     },
     {
       code: 'metrics.bargeCmph',
-      group: t('SÃ  lan', 'Barge'),
-      name: t('CMPH sÃ  lan', 'Barge CMPH'),
-      unit: t('moves/giá»', 'moves/h'),
+      group: t('Sà lan', 'Barge'),
+      name: t('CMPH sà lan', 'Barge CMPH'),
+      unit: t('moves/giờ', 'moves/h'),
       kind: 'number',
       min: 0.1,
       max: 200,
-      note: t('NÄƒng suáº¥t xáº¿p dá»¡ trung bÃ¬nh cá»§a má»™t tá»• lÃ m sÃ  lan.', 'Average moves per hour of a barge gang.'),
+      note: t('Năng suất xếp dỡ trung bình của một tổ làm sà lan.', 'Average moves per hour of a barge gang.'),
     },
     {
       code: 'metrics.vesselCmph',
-      group: t('TÃ u máº¹', 'Mother vessel'),
-      name: t('CMPH máº·c Ä‘á»‹nh tÃ u', 'Default vessel CMPH'),
-      unit: t('moves/giá»', 'moves/h'),
+      group: t('Tàu mẹ', 'Mother vessel'),
+      name: t('CMPH mặc định tàu', 'Default vessel CMPH'),
+      unit: t('moves/giờ', 'moves/h'),
       kind: 'number',
       min: 0.1,
       max: 200,
       note: t(
-        'DÃ¹ng khi má»™t dÃ²ng dá»‹ch vá»¥ Ä‘á»ƒ trá»‘ng CMPH. NÃªn khá»›p vá»›i nÄƒng suáº¥t cáº©u bá».',
+        'Dùng khi một dòng dịch vụ để trống CMPH. Nên khớp với năng suất cẩu bờ.',
         'Used when a service row leaves CMPH blank. Should match quay-crane productivity.'
       ),
     },
     {
       code: 'metrics.mooringCap',
-      group: t('Buá»™c dÃ¢y', 'Mooring'),
-      name: t('Tráº§n khoáº£ng cÃ¡ch buá»™c dÃ¢y má»—i Ä‘áº§u', 'Mooring allowance cap, each end'),
+      group: t('Buộc dây', 'Mooring'),
+      name: t('Trần khoảng cách buộc dây mỗi đầu', 'Mooring allowance cap, each end'),
       unit: 'm',
       kind: 'number',
       min: 0,
       max: 200,
       note: t(
-        'Chiá»u dÃ i chiáº¿m cáº§u = LOA + 2 Ã— min(LOA Ã— tá»· lá»‡ buá»™c dÃ¢y, tráº§n nÃ y). VÃ­ dá»¥ 30.',
-        'Berth occupation = LOA + 2 Ã— min(LOA Ã— mooring ratio, this cap). Example: 30.'
+        'Chiều dài chiếm cầu = LOA + 2 × min(LOA × tỷ lệ buộc dây, trần này). Ví dụ 30.',
+        'Berth occupation = LOA + 2 × min(LOA × mooring ratio, this cap). Example: 30.'
       ),
     },
     {
       code: 'metrics.mooringRatio',
-      group: t('Buá»™c dÃ¢y', 'Mooring'),
-      name: t('Tá»· lá»‡ buá»™c dÃ¢y theo LOA', 'Mooring ratio of LOA'),
-      unit: t('tá»· lá»‡ 0â€“1', 'ratio 0â€“1'),
+      group: t('Buộc dây', 'Mooring'),
+      name: t('Tỷ lệ buộc dây theo LOA', 'Mooring ratio of LOA'),
+      unit: t('tỷ lệ 0–1', 'ratio 0–1'),
       kind: 'number',
       min: 0,
       max: 1,
-      note: ratio + ' ' + t('GiÃ¡ trá»‹ chuáº©n lÃ  0,1 (10% LOA má»—i Ä‘áº§u tÃ u).', 'The standard value is 0.1 (10% of LOA at each end).'),
+      note: ratio + ' ' + t('Giá trị chuẩn là 0,1 (10% LOA mỗi đầu tàu).', 'The standard value is 0.1 (10% of LOA at each end).'),
     },
     {
       code: 'metrics.targetBorPct',
       group: 'BOR',
-      name: t('BOR má»¥c tiÃªu', 'Target BOR'),
+      name: t('BOR mục tiêu', 'Target BOR'),
       unit: '%',
       kind: 'number',
       min: 0,
@@ -334,100 +334,100 @@ function fieldCatalog(locale) {
     {
       code: 'metrics.borAlertPct',
       group: 'BOR',
-      name: t('NgÆ°á»¡ng cáº£nh bÃ¡o BOR', 'BOR alert threshold'),
+      name: t('Ngưỡng cảnh báo BOR', 'BOR alert threshold'),
       unit: '%',
       kind: 'number',
       min: 0,
       max: 150,
-      note: pct + ' ' + t('Tá»« ngÆ°á»¡ng nÃ y há»‡ thá»‘ng báº­t cáº£nh bÃ¡o chiáº¿m cáº§u.', 'At or above this level the system raises an occupancy alert.'),
+      note: pct + ' ' + t('Từ ngưỡng này hệ thống bật cảnh báo chiếm cầu.', 'At or above this level the system raises an occupancy alert.'),
     },
     {
       code: 'metrics.borSpillPct',
       group: 'BOR',
-      name: t('NgÆ°á»¡ng trÃ n sang báº¿n thuÃª', 'Spill-over threshold'),
+      name: t('Ngưỡng tràn sang bến thuê', 'Spill-over threshold'),
       unit: '%',
       kind: 'number',
       min: 0,
       max: 150,
-      note: pct + ' ' + t('Khi BOR vÆ°á»£t ngÆ°á»¡ng nÃ y, há»‡ thá»‘ng xÃ©t chuyá»ƒn chuyáº¿n sang báº¿n thuÃª ngoÃ i.', 'Above this BOR the system considers diverting a call to a hired berth.'),
+      note: pct + ' ' + t('Khi BOR vượt ngưỡng này, hệ thống xét chuyển chuyến sang bến thuê ngoài.', 'Above this BOR the system considers diverting a call to a hired berth.'),
     },
     {
       code: 'metrics.waitingTriggerHrs',
       group: 'BOR',
-      name: t('NgÆ°á»¡ng giá» chá» kÃ­ch hoáº¡t trÃ n', 'Waiting hours that trigger spill-over'),
-      unit: t('giá»', 'h'),
+      name: t('Ngưỡng giờ chờ kích hoạt tràn', 'Waiting hours that trigger spill-over'),
+      unit: t('giờ', 'h'),
       kind: 'number',
       min: 0,
       max: 168,
-      note: hours + ' ' + t('Chá» hÃ¬nh há»c tá»« ngÆ°á»¡ng nÃ y cÅ©ng kÃ­ch hoáº¡t xÃ©t báº¿n thuÃª, ká»ƒ cáº£ khi BOR chÆ°a tá»›i ngÆ°á»¡ng trÃ n.', 'Geometric waiting at or above this also considers a hired berth, even if BOR is still under the spill line.'),
+      note: hours + ' ' + t('Chờ hình học từ ngưỡng này cũng kích hoạt xét bến thuê, kể cả khi BOR chưa tới ngưỡng tràn.', 'Geometric waiting at or above this also considers a hired berth, even if BOR is still under the spill line.'),
     },
     {
       code: 'metrics.delayPenaltyVndPerHour',
       group: 'BOR',
-      name: t('PhÃ­ pháº¡t chá» / giá»', 'Waiting penalty per hour'),
+      name: t('Phí phạt chờ / giờ', 'Waiting penalty per hour'),
       unit: 'VND/h',
       kind: 'number',
       min: 0,
       note: t(
-        'Nháº­p sá»‘ Ä‘á»“ng, khÃ´ng gÃµ dáº¥u cháº¥m ngÄƒn cÃ¡ch. VÃ­ dá»¥ 45000000 lÃ  45 triá»‡u Ä‘á»“ng má»—i giá» chá».',
+        'Nhập số đồng, không gõ dấu chấm ngăn cách. Ví dụ 45000000 là 45 triệu đồng mỗi giờ chờ.',
         'Enter dong as a plain number. Example: 45000000 is 45 million dong per waiting hour.'
       ),
     },
     {
       code: 'metrics.unplannedBreakdownPct',
-      group: t('NÄƒng lá»±c', 'Capacity'),
-      name: t('Tá»· lá»‡ há»ng báº¥t thÆ°á»ng', 'Unplanned breakdown'),
+      group: t('Năng lực', 'Capacity'),
+      name: t('Tỷ lệ hỏng bất thường', 'Unplanned breakdown'),
       unit: '%',
       kind: 'number',
       min: 0,
       max: 100,
-      note: pct + ' ' + t('Trá»« vÃ o nÄƒng lá»±c thiáº¿t káº¿ khi Æ°á»›c lÆ°á»£ng sáº£n lÆ°á»£ng thá»±c.', 'Subtracted from design capacity when estimating achievable moves.'),
+      note: pct + ' ' + t('Trừ vào năng lực thiết kế khi ước lượng sản lượng thực.', 'Subtracted from design capacity when estimating achievable moves.'),
     },
     {
       code: 'equipment.gateMovesDesigned',
-      group: t('BÃ£i CY', 'CY yard'),
-      name: t('Moves cá»•ng thiáº¿t káº¿ / nÄƒm', 'Designed gate moves / year'),
-      unit: t('moves/nÄƒm', 'moves/year'),
+      group: t('Bãi CY', 'CY yard'),
+      name: t('Moves cổng thiết kế / năm', 'Designed gate moves / year'),
+      unit: t('moves/năm', 'moves/year'),
       kind: 'number',
       min: 0,
       note: t(
-        'Cá»™ng vÃ o moves bÃ£i = moves cáº§u + moves cá»•ng + Ä‘áº£o chuyá»ƒn. Nháº­p sá»‘ nguyÃªn.',
+        'Cộng vào moves bãi = moves cầu + moves cổng + đảo chuyển. Nhập số nguyên.',
         'Added to yard moves = quay + gate + rehandles. Enter a whole number.'
       ),
     },
     {
       code: 'equipment.rehandleRatio',
-      group: t('BÃ£i CY', 'CY yard'),
-      name: t('Tá»· lá»‡ Ä‘áº£o chuyá»ƒn', 'Rehandle ratio'),
-      unit: t('tá»· lá»‡ 0â€“1', 'ratio 0â€“1'),
+      group: t('Bãi CY', 'CY yard'),
+      name: t('Tỷ lệ đảo chuyển', 'Rehandle ratio'),
+      unit: t('tỷ lệ 0–1', 'ratio 0–1'),
       kind: 'number',
       min: 0,
       max: 1,
-      note: ratio + ' ' + t('Moves Ä‘áº£o chuyá»ƒn = moves cáº©u bá» Ã— tá»· lá»‡ nÃ y. 0,1 = 10%.', 'Rehandles = quay moves Ã— this ratio. 0.1 = 10%.'),
+      note: ratio + ' ' + t('Moves đảo chuyển = moves cẩu bờ × tỷ lệ này. 0,1 = 10%.', 'Rehandles = quay moves × this ratio. 0.1 = 10%.'),
     },
     {
       code: 'secondary.name',
-      group: t('Báº¿n phá»¥', 'Secondary berth'),
-      name: t('TÃªn báº¿n phá»¥', 'Secondary berth name'),
-      unit: t('chá»¯', 'text'),
+      group: t('Bến phụ', 'Secondary berth'),
+      name: t('Tên bến phụ', 'Secondary berth name'),
+      unit: t('chữ', 'text'),
       kind: 'text',
-      note: t('TÃªn cáº§u Ä‘ang váº½ á»Ÿ má»¥c Báº¿n thuÃª ngoÃ i. KhÃ´ng Ä‘á»ƒ trá»‘ng.', 'Name of the berth drawn on External Berth. Required.'),
+      note: t('Tên cầu đang vẽ ở mục Bến thuê ngoài. Không để trống.', 'Name of the berth drawn on External Berth. Required.'),
     },
     {
       code: 'secondary.quayLength',
-      group: t('Báº¿n phá»¥', 'Secondary berth'),
-      name: t('Chiá»u dÃ i báº¿n phá»¥', 'Secondary quay length'),
+      group: t('Bến phụ', 'Secondary berth'),
+      name: t('Chiều dài bến phụ', 'Secondary quay length'),
       unit: 'm',
       kind: 'number',
       min: 50,
       max: 5000,
-      note: meters + ' ' + t('Cáº©u á»Ÿ sheet Cau ben phu pháº£i náº±m trong chiá»u dÃ i nÃ y. Má»—i cáº©u chiáº¿m 30 m.', 'Cranes on Cau ben phu must fit inside this length. Each crane is 30 m wide.'),
+      note: meters + ' ' + t('Cẩu ở sheet Cau ben phu phải nằm trong chiều dài này. Mỗi cẩu chiếm 30 m.', 'Cranes on Cau ben phu must fit inside this length. Each crane is 30 m wide.'),
     },
   ];
 }
 
 const PARAM_HEADERS = {
-  vi: ['code', 'NhÃ³m', 'ThÃ´ng sá»‘', 'value', 'ÄÆ¡n vá»‹', 'CÃ¡ch nháº­p'],
+  vi: ['code', 'Nhóm', 'Thông số', 'value', 'Đơn vị', 'Cách nhập'],
   en: ['code', 'Group', 'Parameter', 'value', 'Unit', 'How to fill'],
 };
 
@@ -443,114 +443,114 @@ function getPath(model, code) {
 function guideRows(locale) {
   const t = (vi, en) => text(locale, vi, en);
   return [
-    [t('CÃCH DÃ™NG FILE NÃ€Y', 'HOW TO USE THIS FILE')],
+    [t('CÁCH DÙNG FILE NÀY', 'HOW TO USE THIS FILE')],
     [''],
     [
       t(
-        'File lÃ  bá»™ thÃ´ng sá»‘ tÃ­nh toÃ¡n cá»§a Há»‡ thá»‘ng NÄƒng lá»±c Váº­n hÃ nh Cáº§u báº¿n. Chá»‰ sá»­a sá»‘ liá»‡u. KhÃ´ng Ä‘á»•i tÃªn sheet, khÃ´ng Ä‘á»•i cá»™t code / value, khÃ´ng xÃ³a dÃ²ng tiÃªu Ä‘á».',
+        'File là bộ thông số tính toán của Hệ thống Năng lực Vận hành Cầu bến. Chỉ sửa số liệu. Không đổi tên sheet, không đổi cột code / value, không xóa dòng tiêu đề.',
         'This file is the calculation input set for the Berth Operations Capacity System. Edit values only. Do not rename sheets, do not rename the code / value columns, and do not delete header rows.'
       ),
     ],
     [''],
-    [t('CÃC BÆ¯á»šC', 'STEPS')],
+    [t('CÁC BƯỚC', 'STEPS')],
     [
       t(
-        '1. Sá»­a cá»™t value trÃªn sheet Thong so. Má»—i dÃ²ng lÃ  má»™t chá»‰ sá»‘. Äá»c cá»™t CÃ¡ch nháº­p trÆ°á»›c khi gÃµ.',
+        '1. Sửa cột value trên sheet Thong so. Mỗi dòng là một chỉ số. Đọc cột Cách nhập trước khi gõ.',
         '1. Edit the value column on Thong so. Each row is one indicator. Read How to fill before typing.'
       ),
     ],
     [
       t(
-        '2. CÃ¡c sheet cÃ²n láº¡i lÃ  báº£ng: má»™t dÃ²ng lÃ  má»™t chuyáº¿n, má»™t cáº©u, má»™t ca báº£o trÃ¬ hoáº·c má»™t báº¿n thuÃª. ThÃªm dÃ²ng má»›i á»Ÿ phÃ­a dÆ°á»›i Ä‘á»ƒ thÃªm má»¥c. XÃ³a cáº£ dÃ²ng Ä‘á»ƒ bá» má»¥c Ä‘Ã³ khá»i há»‡ thá»‘ng.',
+        '2. Các sheet còn lại là bảng: một dòng là một chuyến, một cẩu, một ca bảo trì hoặc một bến thuê. Thêm dòng mới ở phía dưới để thêm mục. Xóa cả dòng để bỏ mục đó khỏi hệ thống.',
         '2. Other sheets are tables: one row is one call, crane, maintenance window, or hired berth. Add a row at the bottom to add an item. Delete the whole row to remove it.'
       ),
     ],
     [
       t(
-        '3. DÃ²ng 2 cá»§a má»—i báº£ng lÃ  mÃ£ cá»™t (áº©n). KhÃ´ng hiá»‡n, khÃ´ng xÃ³a, khÃ´ng Ä‘á»•i chá»¯. Khi thÃªm dÃ²ng má»›i, Ä‘á»ƒ trá»‘ng cá»™t id â€” há»‡ thá»‘ng sáº½ tá»± cáº¥p mÃ£.',
-        '3. Row 2 of each table is the hidden column code. Do not unhide, delete, or edit it. For a new row, leave id blank â€” the system assigns an id.'
+        '3. Dòng 2 của mỗi bảng là mã cột (ẩn). Không hiện, không xóa, không đổi chữ. Khi thêm dòng mới, để trống cột id — hệ thống sẽ tự cấp mã.',
+        '3. Row 2 of each table is the hidden column code. Do not unhide, delete, or edit it. For a new row, leave id blank — the system assigns an id.'
       ),
     ],
     [
       t(
-        '4. LÆ°u file Excel (.xlsx) rá»“i báº¥m Nháº­p Excel trÃªn há»‡ thá»‘ng. Náº¿u cÃ³ Ã´ sai, há»‡ thá»‘ng khÃ´ng ghi Ä‘Ã¨ sá»‘ Ä‘ang cháº¡y vÃ  sáº½ liá»‡t kÃª lá»—i Ä‘á»ƒ sá»­a.',
+        '4. Lưu file Excel (.xlsx) rồi bấm Nhập Excel trên hệ thống. Nếu có ô sai, hệ thống không ghi đè số đang chạy và sẽ liệt kê lỗi để sửa.',
         '4. Save the .xlsx file and press Upload Excel in the system. If any cell is invalid, current numbers stay unchanged and the system lists what to fix.'
       ),
     ],
     [''],
-    [t('QUY Æ¯á»šC NHáº¬P LIá»†U', 'ENTRY RULES')],
+    [t('QUY ƯỚC NHẬP LIỆU', 'ENTRY RULES')],
     [
       t(
-        'Sá»‘: chá»‰ nháº­p sá»‘. KhÃ´ng gÃµ Ä‘Æ¡n vá»‹ (m, %, giá») vÃ o Ã´ giÃ¡ trá»‹. Pháº§n tháº­p phÃ¢n cÃ³ thá»ƒ dÃ¹ng dáº¥u pháº©y hoáº·c dáº¥u cháº¥m: 0,5 vÃ  0.5 Ä‘á»u Ä‘Æ°á»£c.',
+        'Số: chỉ nhập số. Không gõ đơn vị (m, %, giờ) vào ô giá trị. Phần thập phân có thể dùng dấu phẩy hoặc dấu chấm: 0,5 và 0.5 đều được.',
         'Numbers: enter a number only. Do not type units (m, %, hours) into the value cell. Decimals may use a comma or a dot: 0.5 and 0,5 both work.'
       ),
     ],
     [
       t(
-        'Pháº§n trÄƒm 0â€“100 (BOR, há»ng hÃ³c, nÄƒng lá»±c báº£o trÃ¬): nháº­p 60 cho 60%. KhÃ´ng nháº­p 0,6.',
-        'Percents 0â€“100 (BOR, breakdown, maintenance capacity): enter 60 for 60%. Do not enter 0.6.'
+        'Phần trăm 0–100 (BOR, hỏng hóc, năng lực bảo trì): nhập 60 cho 60%. Không nhập 0,6.',
+        'Percents 0–100 (BOR, breakdown, maintenance capacity): enter 60 for 60%. Do not enter 0.6.'
       ),
     ],
     [
       t(
-        'Tá»· lá»‡ 0â€“1 (sÃ  lan/tÃ u, buá»™c dÃ¢y, sáºµn sÃ ng mÃ¡y, sá»­ dá»¥ng mÃ¡y, Ä‘áº£o chuyá»ƒn): nháº­p 0,92 cho 92%. KhÃ´ng nháº­p 92.',
-        'Ratios 0â€“1 (barge/vessel, mooring, machine availability, utilization, rehandles): enter 0.92 for 92%. Do not enter 92.'
+        'Tỷ lệ 0–1 (sà lan/tàu, buộc dây, sẵn sàng máy, sử dụng máy, đảo chuyển): nhập 0,92 cho 92%. Không nhập 92.',
+        'Ratios 0–1 (barge/vessel, mooring, machine availability, utilization, rehandles): enter 0.92 for 92%. Do not enter 92.'
       ),
     ],
     [
       t(
-        'NgÃ y: T2 T3 T4 T5 T6 T7 CN hoáº·c Mon Tue Wed Thu Fri Sat Sun. Giá»: 14:00 theo Ä‘á»“ng há»“ 24 giá».',
+        'Ngày: T2 T3 T4 T5 T6 T7 CN hoặc Mon Tue Wed Thu Fri Sat Sun. Giờ: 14:00 theo đồng hồ 24 giờ.',
         'Days: T2 T3 T4 T5 T6 T7 CN or Mon Tue Wed Thu Fri Sat Sun. Time: 14:00 on a 24-hour clock.'
       ),
     ],
     [
       t(
-        'MÃ u dá»‹ch vá»¥: mÃ£ hex nhÆ° #0e7490, hoáº·c Ä‘á»ƒ trá»‘ng Ä‘á»ƒ há»‡ thá»‘ng tá»± gÃ¡n. CÃ¹ng mÃ£ dá»‹ch vá»¥ dÃ¹ng cÃ¹ng má»™t mÃ u.',
+        'Màu dịch vụ: mã hex như #0e7490, hoặc để trống để hệ thống tự gán. Cùng mã dịch vụ dùng cùng một màu.',
         'Service color: a hex code such as #0e7490, or leave blank and the system assigns one. The same service code shares one color.'
       ),
     ],
     [''],
-    [t('SHEET NÃ€O CHá»¨A GÃŒ', 'WHAT EACH SHEET HOLDS')],
+    [t('SHEET NÀO CHỨA GÌ', 'WHAT EACH SHEET HOLDS')],
     [
       t(
-        'Thong so â€” toÃ n bá»™ chá»‰ sá»‘ Ä‘Æ¡n: cáº§u chÃ­nh, lá»‹ch lÃ m viá»‡c, tÃ u, sÃ  lan, BOR, cá»•ng, Ä‘áº£o chuyá»ƒn, tÃªn vÃ  chiá»u dÃ i báº¿n phá»¥.',
-        'Thong so â€” every single-value indicator: main quay, calendar, vessels, barges, BOR, gate, rehandles, secondary berth name and length.'
+        'Thong so — toàn bộ chỉ số đơn: cầu chính, lịch làm việc, tàu, sà lan, BOR, cổng, đảo chuyển, tên và chiều dài bến phụ.',
+        'Thong so — every single-value indicator: main quay, calendar, vessels, barges, BOR, gate, rehandles, secondary berth name and length.'
       ),
     ],
     [
       t(
-        'Dich vu â€” proforma tuáº§n. LOA mÃ©t, sáº£n lÆ°á»£ng moves, ngÃ y giá» ETB/ETD, CMPH cá»§a tá»«ng cá»­a sá»•. Giá» chiáº¿m cáº§u = giá» cáº­p + giá» rá»i + khoáº£ng ETB tá»›i ETD. Loáº¡i tuyáº¿n: co dinh láº·p tuáº§n (cÃ³ % lá»‡ch sáº£n lÆ°á»£ng vÃ  giá» cáº­p) hoáº·c ad hoc khÃ´ng láº·p. HÆ°á»›ng cáº­p: thuong luu sÃ¡t má»‘c 0, ha luu sÃ¡t chiá»u dÃ i cáº§u Ä‘ang khai bÃ¡o.',
-        'Dich vu â€” weekly proforma. LOA in meters, volume in moves, ETB/ETD day and time, CMPH of each window. Berth hours = arrival + departure + ETB to ETD. Line kind: fixed repeats weekly (with volume and berth-time swing %) or ad hoc does not repeat. Berthing end: upstream is wharf mark 0, downstream is the current quay length.',
+        'Dich vu — proforma tuần. LOA mét, sản lượng moves, ngày giờ ETB/ETD, CMPH của từng cửa sổ. Giờ chiếm cầu = giờ cập + giờ rời + khoảng ETB tới ETD. Loại tuyến: co dinh lặp tuần (có % lệch sản lượng và giờ cập) hoặc ad hoc không lặp. Hướng cập: thuong luu sát mốc 0, ha luu sát chiều dài cầu đang khai báo.',
+        'Dich vu — weekly proforma. LOA in meters, volume in moves, ETB/ETD day and time, CMPH of each window. Berth hours = arrival + departure + ETB to ETD. Line kind: fixed repeats weekly (with volume and berth-time swing %) or ad hoc does not repeat. Berthing end: upstream is wharf mark 0, downstream is the current quay length.',
       ),
     ],
     [
       t(
-        'Thiet bi CY â€” STS, RTG, RS, EH. NÄƒng lá»±c = CMPH Ã— sá»‘ mÃ¡y Ã— giá»/nÄƒm Ã— sáºµn sÃ ng Ã— sá»­ dá»¥ng. DÃ²ng STS: sá»‘ mÃ¡y vÃ  CMPH láº¥y tá»« sheet Cau bo (sá»‘ cáº©u vÃ  mph trung bÃ¬nh). á»ž dÃ²ng STS chá»‰ cáº§n Ä‘Ãºng há»‡ sá»‘ sáºµn sÃ ng vÃ  há»‡ sá»‘ sá»­ dá»¥ng.',
-        'Thiet bi CY â€” STS, RTG, RS, EH. Capacity = CMPH Ã— count Ã— hours/year Ã— availability Ã— utilization. STS count and CMPH come from Cau bo (crane count and average mph). On the STS row, only availability and utilization are taken from this sheet.'
+        'Thiet bi CY — STS, RTG, RS, EH. Năng lực = CMPH × số máy × giờ/năm × sẵn sàng × sử dụng. Dòng STS: số máy và CMPH lấy từ sheet Cau bo (số cẩu và mph trung bình). Ở dòng STS chỉ cần đúng hệ số sẵn sàng và hệ số sử dụng.',
+        'Thiet bi CY — STS, RTG, RS, EH. Capacity = CMPH × count × hours/year × availability × utilization. STS count and CMPH come from Cau bo (crane count and average mph). On the STS row, only availability and utilization are taken from this sheet.'
       ),
     ],
     [
       t(
-        'Cau bo â€” tá»«ng cáº©u cáº§u chÃ­nh. Má»—i cáº©u rá»™ng 30 m. positionM lÃ  mÃ©t báº¯t Ä‘áº§u thÃ¢n cáº©u, pháº£i náº±m trong chiá»u dÃ i cáº§u vÃ  khÃ´ng Ä‘Ã¨ lÃªn cáº©u khÃ¡c. order = 1 lÃ  cáº©u phÃ­a mÃ©t nhá».',
-        'Cau bo â€” each main-quay crane. Every crane is 30 m wide. positionM is the start meter of the crane, must sit inside the quay and must not overlap another crane. order = 1 is the crane toward the low meter mark.'
+        'Cau bo — từng cẩu cầu chính. Mỗi cẩu rộng 30 m. positionM là mét bắt đầu thân cẩu, phải nằm trong chiều dài cầu và không đè lên cẩu khác. order = 1 là cẩu phía mét nhỏ.',
+        'Cau bo — each main-quay crane. Every crane is 30 m wide. positionM is the start meter of the crane, must sit inside the quay and must not overlap another crane. order = 1 is the crane toward the low meter mark.'
       ),
     ],
     [
       t(
-        'Bao tri â€” khung thá»i gian Ä‘Ã³ng má»™t Ä‘oáº¡n cáº§u. capacityPct = 0 lÃ  Ä‘Ã³ng hoÃ n toÃ n. fromMeter + lengthM khÃ´ng Ä‘Æ°á»£c vÆ°á»£t quÃ¡ chiá»u dÃ i cáº§u chÃ­nh.',
-        'Bao tri â€” time windows that close a quay segment. capacityPct = 0 means fully closed. fromMeter + lengthM must not exceed the main quay length.'
+        'Bao tri — khung thời gian đóng một đoạn cầu. capacityPct = 0 là đóng hoàn toàn. fromMeter + lengthM không được vượt quá chiều dài cầu chính.',
+        'Bao tri — time windows that close a quay segment. capacityPct = 0 means fully closed. fromMeter + lengthM must not exceed the main quay length.'
       ),
     ],
     [
       t(
-        'Cau ben phu â€” cáº©u cá»§a báº¿n phá»¥. CÃ¹ng quy táº¯c 30 m, náº±m trong chiá»u dÃ i báº¿n phá»¥ á»Ÿ sheet Thong so.',
-        'Cau ben phu â€” cranes of the secondary berth. Same 30 m rule, inside the secondary length on Thong so.'
+        'Cau ben phu — cẩu của bến phụ. Cùng quy tắc 30 m, nằm trong chiều dài bến phụ ở sheet Thong so.',
+        'Cau ben phu — cranes of the secondary berth. Same 30 m rule, inside the secondary length on Thong so.'
       ),
     ],
     [
       t(
-        'Ben thue â€” báº¿n thuÃª ngoÃ i dÃ¹ng khi BOR hoáº·c giá» chá» vÆ°á»£t ngÆ°á»¡ng. maxLoa vÃ  quayLength pháº£i Ä‘á»§ cho tÃ u Ä‘Æ°á»£c xÃ©t chuyá»ƒn. hireVnd lÃ  tiá»n thuÃª má»™t chuyáº¿n, báº±ng sá»‘ Ä‘á»“ng.',
-        'Ben thue â€” hired berths used when BOR or waiting exceeds the threshold. maxLoa and quayLength must fit the call being considered. hireVnd is the hire of one call, in dong as a plain number.'
+        'Ben thue — bến thuê ngoài dùng khi BOR hoặc giờ chờ vượt ngưỡng. maxLoa và quayLength phải đủ cho tàu được xét chuyển. hireVnd là tiền thuê một chuyến, bằng số đồng.',
+        'Ben thue — hired berths used when BOR or waiting exceeds the threshold. maxLoa and quayLength must fit the call being considered. hireVnd is the hire of one call, in dong as a plain number.'
       ),
     ],
   ];
@@ -558,8 +558,8 @@ function guideRows(locale) {
 
 function tableSpec(locale) {
   const t = (vi, en) => text(locale, vi, en);
-  const dayNote = t('T2â€“T7, CN hoáº·c Monâ€“Sun.', 'T2â€“T7, CN or Monâ€“Sun.');
-  const timeNote = t('Dáº¡ng 14:00.', 'Use 14:00.');
+  const dayNote = t('T2–T7, CN hoặc Mon–Sun.', 'T2–T7, CN or Mon–Sun.');
+  const timeNote = t('Dạng 14:00.', 'Use 14:00.');
   return {
     [SHEET.services]: {
       keys: [
@@ -582,90 +582,90 @@ function tableSpec(locale) {
       ],
       titles: [
         'id',
-        t('MÃ£ dá»‹ch vá»¥', 'Service code'),
-        t('TÃªn tÃ u', 'Vessel name'),
+        t('Mã dịch vụ', 'Service code'),
+        t('Tên tàu', 'Vessel name'),
         'LOA (m)',
-        t('Sáº£n lÆ°á»£ng (moves)', 'Volume (moves)'),
-        t('Sáº£n lÆ°á»£ng dá»± kiáº¿n (moves)', 'Expected volume (moves)'),
-        'ETB ' + t('ngÃ y', 'day'),
-        'ETB ' + t('giá»', 'time'),
-        'ETD ' + t('ngÃ y', 'day'),
-        'ETD ' + t('giá»', 'time'),
+        t('Sản lượng (moves)', 'Volume (moves)'),
+        t('Sản lượng dự kiến (moves)', 'Expected volume (moves)'),
+        'ETB ' + t('ngày', 'day'),
+        'ETB ' + t('giờ', 'time'),
+        'ETD ' + t('ngày', 'day'),
+        'ETD ' + t('giờ', 'time'),
         'CMPH',
-        t('MÃ u #hex', 'Color #hex'),
-        t('Loáº¡i tuyáº¿n', 'Line kind'),
-        t('Lá»‡ch sáº£n lÆ°á»£ng %', 'Volume swing %'),
-        t('Lá»‡ch giá» cáº­p %', 'Berth-time swing %'),
-        t('HÆ°á»›ng cáº­p', 'Berthing end'),
+        t('Màu #hex', 'Color #hex'),
+        t('Loại tuyến', 'Line kind'),
+        t('Lệch sản lượng %', 'Volume swing %'),
+        t('Lệch giờ cập %', 'Berth-time swing %'),
+        t('Hướng cập', 'Berthing end'),
       ],
       notes: [
-        t('Äá»ƒ trá»‘ng náº¿u thÃªm dÃ²ng má»›i.', 'Leave blank for a new row.'),
-        t('Báº¯t buá»™c. VÃ­ dá»¥ VCS. CÃ¹ng mÃ£ sáº½ dÃ¹ng chung má»™t mÃ u.', 'Required. Example: VCS. The same code shares one color.'),
-        t('TÃªn tÃ u hiá»ƒn thá»‹ trÃªn káº¿ hoáº¡ch.', 'Vessel name shown on the plan.'),
-        t('Chiá»u dÃ i tÃ u, mÃ©t, lá»›n hÆ¡n 0.', 'Vessel length in meters, greater than 0.'),
-        t('Moves káº¿ hoáº¡ch cá»§a chuyáº¿n, â‰¥ 0.', 'Planned moves of the call, â‰¥ 0.'),
-        t('Moves dá»± kiáº¿n thá»±c táº¿, â‰¥ 0. DÃ¹ng cho so sÃ¡nh sáº£n lÆ°á»£ng.', 'Expected actual moves, â‰¥ 0. Used for volume comparison.'),
+        t('Để trống nếu thêm dòng mới.', 'Leave blank for a new row.'),
+        t('Bắt buộc. Ví dụ VCS. Cùng mã sẽ dùng chung một màu.', 'Required. Example: VCS. The same code shares one color.'),
+        t('Tên tàu hiển thị trên kế hoạch.', 'Vessel name shown on the plan.'),
+        t('Chiều dài tàu, mét, lớn hơn 0.', 'Vessel length in meters, greater than 0.'),
+        t('Moves kế hoạch của chuyến, ≥ 0.', 'Planned moves of the call, ≥ 0.'),
+        t('Moves dự kiến thực tế, ≥ 0. Dùng cho so sánh sản lượng.', 'Expected actual moves, ≥ 0. Used for volume comparison.'),
         dayNote,
         timeNote,
         dayNote,
         timeNote,
-        t('Moves/giá» cá»§a chuyáº¿n nÃ y. Lá»›n hÆ¡n 0.', 'Moves per hour of this call. Greater than 0.'),
-        t('VÃ­ dá»¥ #0e7490 hoáº·c Ä‘á»ƒ trá»‘ng.', 'Example #0e7490 or leave blank.'),
-        t('co dinh hoáº·c ad hoc. Cá»‘ Ä‘á»‹nh láº·p má»—i tuáº§n. Ad hoc chá»‰ cÃ³ á»Ÿ tuáº§n Ä‘ang xáº¿p.', 'fixed or ad hoc. Fixed repeats every week. Ad hoc stays only in the current week.'),
-        t('0â€“100. Pháº§n trÄƒm sáº£n lÆ°á»£ng tuáº§n láº·p Ä‘Æ°á»£c phÃ©p lá»‡ch khá»i proforma. Äá»ƒ trá»‘ng = 0.', '0â€“100. Percent a repeated week may swing from proforma volume. Blank = 0.'),
-        t('0â€“100. Pháº§n trÄƒm giá» cáº­p tuáº§n láº·p Ä‘Æ°á»£c phÃ©p lá»‡ch. Äá»ƒ trá»‘ng = 0.', '0â€“100. Percent a repeated week may swing berth time. Blank = 0.'),
-        t('thuong luu (sÃ¡t má»‘c 0) hoáº·c ha luu (sÃ¡t má»‘c cuá»‘i cáº§u Ä‘ang cÃ i). Äá»ƒ trá»‘ng thÃ¬ giá»¯ chá»— Ä‘ang xáº¿p.', 'upstream (wharf mark 0) or downstream (current quay end). Blank keeps the current berth position.'),
+        t('Moves/giờ của chuyến này. Lớn hơn 0.', 'Moves per hour of this call. Greater than 0.'),
+        t('Ví dụ #0e7490 hoặc để trống.', 'Example #0e7490 or leave blank.'),
+        t('co dinh hoặc ad hoc. Cố định lặp mỗi tuần. Ad hoc chỉ có ở tuần đang xếp.', 'fixed or ad hoc. Fixed repeats every week. Ad hoc stays only in the current week.'),
+        t('0–100. Phần trăm sản lượng tuần lặp được phép lệch khỏi proforma. Để trống = 0.', '0–100. Percent a repeated week may swing from proforma volume. Blank = 0.'),
+        t('0–100. Phần trăm giờ cập tuần lặp được phép lệch. Để trống = 0.', '0–100. Percent a repeated week may swing berth time. Blank = 0.'),
+        t('thuong luu (sát mốc 0) hoặc ha luu (sát mốc cuối cầu đang cài). Để trống thì giữ chỗ đang xếp.', 'upstream (wharf mark 0) or downstream (current quay end). Blank keeps the current berth position.'),
       ],
     },
     [SHEET.fleet]: {
       keys: ['type', 'cmph', 'count', 'availableHrsPerYear', 'availability', 'utilization'],
       titles: [
-        t('Loáº¡i', 'Type'),
+        t('Loại', 'Type'),
         'CMPH',
-        t('Sá»‘ mÃ¡y', 'Count'),
-        t('Giá»/nÄƒm', 'Hours/year'),
-        t('Sáºµn sÃ ng (0â€“1)', 'Availability (0â€“1)'),
-        t('Sá»­ dá»¥ng (0â€“1)', 'Utilization (0â€“1)'),
+        t('Số máy', 'Count'),
+        t('Giờ/năm', 'Hours/year'),
+        t('Sẵn sàng (0–1)', 'Availability (0–1)'),
+        t('Sử dụng (0–1)', 'Utilization (0–1)'),
       ],
       notes: [
-        t('ÄÃºng má»™t dÃ²ng cho má»—i loáº¡i: STS, RTG, RS, EH. KhÃ´ng thÃªm loáº¡i khÃ¡c.', 'Exactly one row per type: STS, RTG, RS, EH. Do not add another type.'),
-        t('Vá»›i RTG, RS, EH: moves/giá» má»—i mÃ¡y. Vá»›i STS: há»‡ thá»‘ng láº¥y mph trung bÃ¬nh cá»§a sheet Cau bo.', 'For RTG, RS, EH: moves/hour per machine. For STS: the system uses the average mph from Cau bo.'),
-        t('Vá»›i RTG, RS, EH: sá»‘ mÃ¡y â‰¥ 0. Vá»›i STS: há»‡ thá»‘ng láº¥y sá»‘ dÃ²ng á»Ÿ Cau bo.', 'For RTG, RS, EH: machine count â‰¥ 0. For STS: the system uses the number of rows on Cau bo.'),
-        t('ThÆ°á»ng 8760. NÄƒng lá»±c = CMPH Ã— sá»‘ mÃ¡y Ã— giá» nÃ y Ã— sáºµn sÃ ng Ã— sá»­ dá»¥ng.', 'Usually 8760. Capacity = CMPH Ã— count Ã— this Ã— availability Ã— utilization.'),
-        t('0â€“1. VÃ­ dá»¥ 0,92 = mÃ¡y sáºµn sÃ ng 92% thá»i gian. KhÃ´ng nháº­p 92.', '0â€“1. Example: 0.92 = the machine is available 92% of the time. Do not enter 92.'),
-        t('0â€“1. VÃ­ dá»¥ 0,8 = sá»­ dá»¥ng 80% giá» sáºµn sÃ ng. KhÃ´ng nháº­p 80.', '0â€“1. Example: 0.8 = used for 80% of available hours. Do not enter 80.'),
+        t('Đúng một dòng cho mỗi loại: STS, RTG, RS, EH. Không thêm loại khác.', 'Exactly one row per type: STS, RTG, RS, EH. Do not add another type.'),
+        t('Với RTG, RS, EH: moves/giờ mỗi máy. Với STS: hệ thống lấy mph trung bình của sheet Cau bo.', 'For RTG, RS, EH: moves/hour per machine. For STS: the system uses the average mph from Cau bo.'),
+        t('Với RTG, RS, EH: số máy ≥ 0. Với STS: hệ thống lấy số dòng ở Cau bo.', 'For RTG, RS, EH: machine count ≥ 0. For STS: the system uses the number of rows on Cau bo.'),
+        t('Thường 8760. Năng lực = CMPH × số máy × giờ này × sẵn sàng × sử dụng.', 'Usually 8760. Capacity = CMPH × count × this × availability × utilization.'),
+        t('0–1. Ví dụ 0,92 = máy sẵn sàng 92% thời gian. Không nhập 92.', '0–1. Example: 0.92 = the machine is available 92% of the time. Do not enter 92.'),
+        t('0–1. Ví dụ 0,8 = sử dụng 80% giờ sẵn sàng. Không nhập 80.', '0–1. Example: 0.8 = used for 80% of available hours. Do not enter 80.'),
       ],
     },
     [SHEET.cranes]: {
       keys: ['id', 'name', 'mph', 'order', 'positionM'],
-      titles: ['id', t('TÃªn cáº©u', 'Crane name'), 'MPH', t('Thá»© tá»±', 'Order'), t('MÃ©t báº¯t Ä‘áº§u', 'Start meter')],
+      titles: ['id', t('Tên cẩu', 'Crane name'), 'MPH', t('Thứ tự', 'Order'), t('Mét bắt đầu', 'Start meter')],
       notes: [
-        t('Äá»ƒ trá»‘ng náº¿u thÃªm cáº©u má»›i.', 'Leave blank for a new crane.'),
-        t('TÃªn hiá»ƒn thá»‹, vÃ­ dá»¥ Crane-01.', 'Display name, for example Crane-01.'),
-        t('Moves/giá» cá»§a cáº©u. Trung bÃ¬nh cÃ¡c cáº©u nÃ y trá»Ÿ thÃ nh CMPH cá»§a STS.', 'Moves per hour. The average becomes the STS CMPH.'),
-        t('1, 2, 3â€¦ theo hÆ°á»›ng tá»« mÃ©t nhá» tá»›i mÃ©t lá»›n.', '1, 2, 3â€¦ from the low meter mark toward the high one.'),
-        t('MÃ©t báº¯t Ä‘áº§u thÃ¢n cáº©u. Cáº©u dÃ i 30 m, pháº£i náº±m trá»n trong cáº§u vÃ  khÃ´ng chá»“ng lÃªn cáº©u káº¿.', 'Start meter of the crane body. A crane is 30 m long, must fit on the quay, and must not overlap the next crane.'),
+        t('Để trống nếu thêm cẩu mới.', 'Leave blank for a new crane.'),
+        t('Tên hiển thị, ví dụ Crane-01.', 'Display name, for example Crane-01.'),
+        t('Moves/giờ của cẩu. Trung bình các cẩu này trở thành CMPH của STS.', 'Moves per hour. The average becomes the STS CMPH.'),
+        t('1, 2, 3… theo hướng từ mét nhỏ tới mét lớn.', '1, 2, 3… from the low meter mark toward the high one.'),
+        t('Mét bắt đầu thân cẩu. Cẩu dài 30 m, phải nằm trọn trong cầu và không chồng lên cẩu kế.', 'Start meter of the crane body. A crane is 30 m long, must fit on the quay, and must not overlap the next crane.'),
       ],
     },
     [SHEET.maintenance]: {
       keys: ['id', 'reason', 'fromMeter', 'lengthM', 'capacityPct', 'etbDay', 'etbTime', 'etdDay', 'etdTime'],
       titles: [
         'id',
-        t('LÃ½ do', 'Reason'),
-        t('Tá»« mÃ©t', 'From meter'),
-        t('Chiá»u dÃ i (m)', 'Length (m)'),
-        t('NÄƒng lá»±c cÃ²n (%)', 'Remaining capacity (%)'),
-        t('Tá»« ngÃ y', 'From day'),
-        t('Tá»« giá»', 'From time'),
-        t('Äáº¿n ngÃ y', 'To day'),
-        t('Äáº¿n giá»', 'To time'),
+        t('Lý do', 'Reason'),
+        t('Từ mét', 'From meter'),
+        t('Chiều dài (m)', 'Length (m)'),
+        t('Năng lực còn (%)', 'Remaining capacity (%)'),
+        t('Từ ngày', 'From day'),
+        t('Từ giờ', 'From time'),
+        t('Đến ngày', 'To day'),
+        t('Đến giờ', 'To time'),
       ],
       notes: [
-        t('Äá»ƒ trá»‘ng náº¿u thÃªm ca má»›i. XÃ³a háº¿t dÃ²ng náº¿u tuáº§n khÃ´ng báº£o trÃ¬.', 'Leave blank for a new window. Delete all rows if the week has no maintenance.'),
-        t('TÃªn hiá»ƒn thá»‹ trÃªn káº¿ hoáº¡ch.', 'Name shown on the plan.'),
-        t('MÃ©t báº¯t Ä‘áº§u Ä‘oáº¡n báº£o trÃ¬, â‰¥ 0.', 'Start meter of the maintenance stretch, â‰¥ 0.'),
-        t('Äá»™ dÃ i Ä‘oáº¡n, mÃ©t. fromMeter + lengthM khÃ´ng vÆ°á»£t quÃ¡ chiá»u dÃ i cáº§u chÃ­nh.', 'Length in meters. fromMeter + lengthM must not pass the main quay length.'),
-        t('0 = Ä‘Ã³ng hoÃ n toÃ n (khÃ´ng xáº¿p dá»¡). 50 = cÃ²n 50% nÄƒng lá»±c. Nháº­p 0â€“100.', '0 = fully closed. 50 = 50% capacity left. Enter 0â€“100.'),
+        t('Để trống nếu thêm ca mới. Xóa hết dòng nếu tuần không bảo trì.', 'Leave blank for a new window. Delete all rows if the week has no maintenance.'),
+        t('Tên hiển thị trên kế hoạch.', 'Name shown on the plan.'),
+        t('Mét bắt đầu đoạn bảo trì, ≥ 0.', 'Start meter of the maintenance stretch, ≥ 0.'),
+        t('Độ dài đoạn, mét. fromMeter + lengthM không vượt quá chiều dài cầu chính.', 'Length in meters. fromMeter + lengthM must not pass the main quay length.'),
+        t('0 = đóng hoàn toàn (không xếp dỡ). 50 = còn 50% năng lực. Nhập 0–100.', '0 = fully closed. 50 = 50% capacity left. Enter 0–100.'),
         dayNote,
         timeNote,
         dayNote,
@@ -674,36 +674,36 @@ function tableSpec(locale) {
     },
     [SHEET.secondaryCranes]: {
       keys: ['id', 'name', 'mph', 'order', 'positionM'],
-      titles: ['id', t('TÃªn cáº©u', 'Crane name'), 'MPH', t('Thá»© tá»±', 'Order'), t('MÃ©t báº¯t Ä‘áº§u', 'Start meter')],
+      titles: ['id', t('Tên cẩu', 'Crane name'), 'MPH', t('Thứ tự', 'Order'), t('Mét bắt đầu', 'Start meter')],
       notes: [
-        t('Äá»ƒ trá»‘ng náº¿u thÃªm cáº©u má»›i.', 'Leave blank for a new crane.'),
-        t('TÃªn cáº©u trÃªn báº¿n phá»¥.', 'Crane name on the secondary berth.'),
-        t('Moves/giá», lá»›n hÆ¡n 0.', 'Moves per hour, greater than 0.'),
-        t('Thá»© tá»± 1, 2, 3.', 'Order 1, 2, 3.'),
-        t('MÃ©t báº¯t Ä‘áº§u. Cáº©u dÃ i 30 m vÃ  pháº£i náº±m trong chiá»u dÃ i báº¿n phá»¥.', 'Start meter. The crane is 30 m and must fit the secondary length.'),
+        t('Để trống nếu thêm cẩu mới.', 'Leave blank for a new crane.'),
+        t('Tên cẩu trên bến phụ.', 'Crane name on the secondary berth.'),
+        t('Moves/giờ, lớn hơn 0.', 'Moves per hour, greater than 0.'),
+        t('Thứ tự 1, 2, 3.', 'Order 1, 2, 3.'),
+        t('Mét bắt đầu. Cẩu dài 30 m và phải nằm trong chiều dài bến phụ.', 'Start meter. The crane is 30 m and must fit the secondary length.'),
       ],
     },
     [SHEET.external]: {
       keys: ['id', 'name', 'partner', 'quayLength', 'draftM', 'maxLoa', 'towNm', 'hireVnd'],
       titles: [
         'id',
-        t('TÃªn báº¿n', 'Berth name'),
-        t('Äá»‘i tÃ¡c', 'Partner'),
-        t('Chiá»u dÃ i cáº§u (m)', 'Quay length (m)'),
-        t('Má»›n nÆ°á»›c (m)', 'Draft (m)'),
-        t('LOA tá»‘i Ä‘a (m)', 'Max LOA (m)'),
-        t('KÃ©o tÃ u (háº£i lÃ½)', 'Tow (nm)'),
-        t('GiÃ¡ thuÃª / chuyáº¿n (VND)', 'Hire / call (VND)'),
+        t('Tên bến', 'Berth name'),
+        t('Đối tác', 'Partner'),
+        t('Chiều dài cầu (m)', 'Quay length (m)'),
+        t('Mớn nước (m)', 'Draft (m)'),
+        t('LOA tối đa (m)', 'Max LOA (m)'),
+        t('Kéo tàu (hải lý)', 'Tow (nm)'),
+        t('Giá thuê / chuyến (VND)', 'Hire / call (VND)'),
       ],
       notes: [
-        t('Äá»ƒ trá»‘ng náº¿u thÃªm báº¿n má»›i.', 'Leave blank for a new berth.'),
-        t('TÃªn báº¿n thuÃª. Báº¯t buá»™c.', 'Hired berth name. Required.'),
-        t('TÃªn Ä‘Æ¡n vá»‹ liÃªn káº¿t. CÃ³ thá»ƒ Ä‘á»ƒ trá»‘ng.', 'Linked operator. May be blank.'),
-        t('Pháº£i â‰¥ LOA cá»§a tÃ u Ä‘Æ°á»£c chuyá»ƒn, tÃ­nh báº±ng mÃ©t.', 'Must be at least the LOA of the diverted vessel, in meters.'),
-        t('Má»›n khai thÃ¡c, mÃ©t.', 'Working draft, meters.'),
-        t('TÃ u dÃ i hÆ¡n má»©c nÃ y khÃ´ng Ä‘Æ°á»£c chá»n báº¿n nÃ y.', 'A longer vessel cannot be assigned here.'),
-        t('Khoáº£ng cÃ¡ch lai dáº¯t, háº£i lÃ½.', 'Tow distance, nautical miles.'),
-        t('Sá»‘ Ä‘á»“ng cho má»™t chuyáº¿n, khÃ´ng gÃµ dáº¥u cháº¥m. VÃ­ dá»¥ 850000000.', 'Dong for one call, without separators. Example: 850000000.'),
+        t('Để trống nếu thêm bến mới.', 'Leave blank for a new berth.'),
+        t('Tên bến thuê. Bắt buộc.', 'Hired berth name. Required.'),
+        t('Tên đơn vị liên kết. Có thể để trống.', 'Linked operator. May be blank.'),
+        t('Phải ≥ LOA của tàu được chuyển, tính bằng mét.', 'Must be at least the LOA of the diverted vessel, in meters.'),
+        t('Mớn khai thác, mét.', 'Working draft, meters.'),
+        t('Tàu dài hơn mức này không được chọn bến này.', 'A longer vessel cannot be assigned here.'),
+        t('Khoảng cách lai dắt, hải lý.', 'Tow distance, nautical miles.'),
+        t('Số đồng cho một chuyến, không gõ dấu chấm. Ví dụ 850000000.', 'Dong for one call, without separators. Example: 850000000.'),
       ],
     },
   };
@@ -737,7 +737,7 @@ function requireSheet(wb, name, errors, locale) {
       row: 0,
       message: text(
         locale,
-        `Thiáº¿u sheet "${name}". HÃ£y dÃ¹ng Ä‘Ãºng file máº«u, khÃ´ng Ä‘á»•i tÃªn sheet.`,
+        `Thiếu sheet "${name}". Hãy dùng đúng file mẫu, không đổi tên sheet.`,
         `Missing sheet "${name}". Use the template and do not rename sheets.`
       ),
     });
@@ -755,7 +755,7 @@ function readKeyedTable(sheet, spec, errors, locale, sheetName) {
       row: 2,
       message: text(
         locale,
-        'DÃ²ng mÃ£ cá»™t (dÃ²ng 2) bá»‹ sá»­a hoáº·c bá»‹ xÃ³a. HÃ£y táº£i láº¡i file máº«u vÃ  chá»‰ sá»­a sá»‘ liá»‡u tá»« dÃ²ng 4.',
+        'Dòng mã cột (dòng 2) bị sửa hoặc bị xóa. Hãy tải lại file mẫu và chỉ sửa số liệu từ dòng 4.',
         'The column-code row (row 2) was changed or deleted. Download a fresh template and edit data from row 4 only.'
       ),
     });
@@ -820,20 +820,20 @@ function needNumber(errors, locale, sheet, row, label, value, { min, max, intege
       errors,
       sheet,
       row,
-      text(locale, `${label}: Ã´ trá»‘ng hoáº·c khÃ´ng pháº£i sá»‘.`, `${label}: empty or not a number.`)
+      text(locale, `${label}: ô trống hoặc không phải số.`, `${label}: empty or not a number.`)
     );
     return null;
   }
   if (min != null && n < min) {
-    pushError(errors, sheet, row, text(locale, `${label}: pháº£i â‰¥ ${min}.`, `${label}: must be â‰¥ ${min}.`));
+    pushError(errors, sheet, row, text(locale, `${label}: phải ≥ ${min}.`, `${label}: must be ≥ ${min}.`));
     return null;
   }
   if (max != null && n > max) {
-    pushError(errors, sheet, row, text(locale, `${label}: pháº£i â‰¤ ${max}.`, `${label}: must be â‰¤ ${max}.`));
+    pushError(errors, sheet, row, text(locale, `${label}: phải ≤ ${max}.`, `${label}: must be ≤ ${max}.`));
     return null;
   }
   if (integer && Math.round(n) !== n) {
-    pushError(errors, sheet, row, text(locale, `${label}: pháº£i lÃ  sá»‘ nguyÃªn.`, `${label}: must be a whole number.`));
+    pushError(errors, sheet, row, text(locale, `${label}: phải là số nguyên.`, `${label}: must be a whole number.`));
     return null;
   }
   return n;
@@ -846,7 +846,7 @@ function needDay(errors, locale, sheet, row, label, value) {
       errors,
       sheet,
       row,
-      text(locale, `${label}: nháº­p T2â€“T7, CN hoáº·c Monâ€“Sun.`, `${label}: use T2â€“T7, CN or Monâ€“Sun.`)
+      text(locale, `${label}: nhập T2–T7, CN hoặc Mon–Sun.`, `${label}: use T2–T7, CN or Mon–Sun.`)
     );
     return null;
   }
@@ -856,7 +856,7 @@ function needDay(errors, locale, sheet, row, label, value) {
 function needTime(errors, locale, sheet, row, label, value) {
   const time = parseTime(value);
   if (!time) {
-    pushError(errors, sheet, row, text(locale, `${label}: nháº­p giá» dáº¡ng 14:00.`, `${label}: use a time like 14:00.`));
+    pushError(errors, sheet, row, text(locale, `${label}: nhập giờ dạng 14:00.`, `${label}: use a time like 14:00.`));
     return null;
   }
   return time;
@@ -886,7 +886,7 @@ function checkCranes(rows, quayLength, errors, locale, sheetName) {
         crane.sourceRow,
         text(
           locale,
-          `${crane.name}: mÃ©t báº¯t Ä‘áº§u ${crane.positionM} khÃ´ng náº±m vá»«a cáº§u dÃ i ${quayLength} m (cáº©u chiáº¿m ${CRANE_WIDTH_M} m).`,
+          `${crane.name}: mét bắt đầu ${crane.positionM} không nằm vừa cầu dài ${quayLength} m (cẩu chiếm ${CRANE_WIDTH_M} m).`,
           `${crane.name}: start meter ${crane.positionM} does not fit a ${quayLength} m quay (a crane uses ${CRANE_WIDTH_M} m).`
         )
       );
@@ -900,7 +900,7 @@ function checkCranes(rows, quayLength, errors, locale, sheetName) {
         laid[i].sourceRow,
         text(
           locale,
-          `${laid[i].name} chá»“ng lÃªn ${laid[i - 1].name}. Má»—i cáº©u cáº§n 30 m riÃªng.`,
+          `${laid[i].name} chồng lên ${laid[i - 1].name}. Mỗi cẩu cần 30 m riêng.`,
           `${laid[i].name} overlaps ${laid[i - 1].name}. Each crane needs its own 30 m.`
         )
       );
@@ -960,12 +960,12 @@ export function buildParameterWorkbook(model, locale = 'vi') {
     [
       paramHeader,
       [
-        text(lang, 'KhÃ´ng sá»­a', 'Do not edit'),
-        text(lang, 'KhÃ´ng sá»­a', 'Do not edit'),
-        text(lang, 'KhÃ´ng sá»­a', 'Do not edit'),
-        text(lang, 'CHá»ˆ Sá»¬A Cá»˜T NÃ€Y', 'EDIT THIS COLUMN ONLY'),
-        text(lang, 'KhÃ´ng sá»­a', 'Do not edit'),
-        text(lang, 'Äá»c trÆ°á»›c khi nháº­p', 'Read before entering'),
+        text(lang, 'Không sửa', 'Do not edit'),
+        text(lang, 'Không sửa', 'Do not edit'),
+        text(lang, 'Không sửa', 'Do not edit'),
+        text(lang, 'CHỈ SỬA CỘT NÀY', 'EDIT THIS COLUMN ONLY'),
+        text(lang, 'Không sửa', 'Do not edit'),
+        text(lang, 'Đọc trước khi nhập', 'Read before entering'),
       ],
       ...paramBody,
     ],
@@ -1070,7 +1070,7 @@ function readParams(sheet, errors, locale) {
       1,
       text(
         locale,
-        'DÃ²ng tiÃªu Ä‘á» sheet Thong so pháº£i cÃ²n hai cá»™t code vÃ  value. HÃ£y dÃ¹ng láº¡i file máº«u.',
+        'Dòng tiêu đề sheet Thong so phải còn hai cột code và value. Hãy dùng lại file mẫu.',
         'The Thong so header must still contain the code and value columns. Use the template again.'
       )
     );
@@ -1101,7 +1101,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         {
           sheet: '',
           row: 0,
-          message: text(lang, 'KhÃ´ng Ä‘á»c Ä‘Æ°á»£c file. HÃ£y dÃ¹ng file Excel .xlsx máº«u.', 'This file could not be read. Use the .xlsx template.'),
+          message: text(lang, 'Không đọc được file. Hãy dùng file Excel .xlsx mẫu.', 'This file could not be read. Use the .xlsx template.'),
         },
       ],
       data: null,
@@ -1129,7 +1129,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         errors,
         SHEET.params,
         0,
-        text(lang, `Thiáº¿u chá»‰ sá»‘ ${field.code}. KhÃ´ng xÃ³a dÃ²ng trong sheet Thong so.`, `Missing indicator ${field.code}. Do not delete rows on Thong so.`)
+        text(lang, `Thiếu chỉ số ${field.code}. Không xóa dòng trong sheet Thong so.`, `Missing indicator ${field.code}. Do not delete rows on Thong so.`)
       );
       return;
     }
@@ -1141,7 +1141,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
           errors,
           SHEET.params,
           found.row,
-          text(lang, `${field.name}: khÃ´ng Ä‘á»ƒ trá»‘ng.`, `${field.name}: must not be empty.`)
+          text(lang, `${field.name}: không để trống.`, `${field.name}: must not be empty.`)
         );
       }
       bag[root][key] = s;
@@ -1159,10 +1159,10 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
   const services = serviceRecords.map(({ row, obj }) => {
     const service = readText(obj.service).toUpperCase();
     if (!service) {
-      pushError(errors, SHEET.services, row, text(lang, 'MÃ£ dá»‹ch vá»¥ khÃ´ng Ä‘Æ°á»£c trá»‘ng.', 'Service code is required.'));
+      pushError(errors, SHEET.services, row, text(lang, 'Mã dịch vụ không được trống.', 'Service code is required.'));
     }
     const loa = needNumber(errors, lang, SHEET.services, row, 'LOA', obj.loa, { min: 1, max: 500 });
-    const volume = needNumber(errors, lang, SHEET.services, row, text(lang, 'Sáº£n lÆ°á»£ng', 'Volume'), obj.volume, {
+    const volume = needNumber(errors, lang, SHEET.services, row, text(lang, 'Sản lượng', 'Volume'), obj.volume, {
       min: 0,
     });
     const expectedVolume = needNumber(
@@ -1170,7 +1170,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
       lang,
       SHEET.services,
       row,
-      text(lang, 'Sáº£n lÆ°á»£ng dá»± kiáº¿n', 'Expected volume'),
+      text(lang, 'Sản lượng dự kiến', 'Expected volume'),
       obj.expectedVolume,
       { min: 0 }
     );
@@ -1183,7 +1183,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         errors,
         SHEET.services,
         row,
-        text(lang, 'Loáº¡i tuyáº¿n chá»‰ lÃ  co dinh hoáº·c ad hoc.', 'Line kind must be fixed or ad hoc.')
+        text(lang, 'Loại tuyến chỉ là co dinh hoặc ad hoc.', 'Line kind must be fixed or ad hoc.')
       );
     }
     if (berthSide == null) {
@@ -1191,7 +1191,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         errors,
         SHEET.services,
         row,
-        text(lang, 'HÆ°á»›ng cáº­p chá»‰ lÃ  thuong luu hoáº·c ha luu, hoáº·c Ä‘á»ƒ trá»‘ng.', 'Berthing end must be upstream or downstream, or be left blank.')
+        text(lang, 'Hướng cập chỉ là thuong luu hoặc ha luu, hoặc để trống.', 'Berthing end must be upstream or downstream, or be left blank.')
       );
     }
     const volumeChangePct = optionalPercent(
@@ -1199,7 +1199,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
       lang,
       SHEET.services,
       row,
-      text(lang, 'Lá»‡ch sáº£n lÆ°á»£ng %', 'Volume swing %'),
+      text(lang, 'Lệch sản lượng %', 'Volume swing %'),
       obj.volumeChangePct
     );
     const timeChangePct = optionalPercent(
@@ -1207,7 +1207,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
       lang,
       SHEET.services,
       row,
-      text(lang, 'Lá»‡ch giá» cáº­p %', 'Berth-time swing %'),
+      text(lang, 'Lệch giờ cập %', 'Berth-time swing %'),
       obj.timeChangePct
     );
     if (color && !/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(color)) {
@@ -1215,7 +1215,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         errors,
         SHEET.services,
         row,
-        text(lang, 'MÃ u pháº£i dáº¡ng #0e7490 hoáº·c Ä‘á»ƒ trá»‘ng.', 'Color must look like #0e7490, or be left blank.')
+        text(lang, 'Màu phải dạng #0e7490 hoặc để trống.', 'Color must look like #0e7490, or be left blank.')
       );
     }
     return {
@@ -1247,12 +1247,12 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         errors,
         SHEET.fleet,
         row,
-        text(lang, 'Loáº¡i mÃ¡y chá»‰ Ä‘Æ°á»£c lÃ  STS, RTG, RS hoáº·c EH.', 'Machine type must be STS, RTG, RS, or EH.')
+        text(lang, 'Loại máy chỉ được là STS, RTG, RS hoặc EH.', 'Machine type must be STS, RTG, RS, or EH.')
       );
       return;
     }
     if (fleetMap.has(type)) {
-      pushError(errors, SHEET.fleet, row, text(lang, `Loáº¡i ${type} bá»‹ nháº­p hai láº§n.`, `${type} is entered twice.`));
+      pushError(errors, SHEET.fleet, row, text(lang, `Loại ${type} bị nhập hai lần.`, `${type} is entered twice.`));
       return;
     }
     fleetMap.set(type, {
@@ -1276,7 +1276,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         errors,
         SHEET.fleet,
         0,
-        text(lang, `Thiáº¿u dÃ²ng ${type}. Giá»¯ Ä‘Ãºng bá»‘n dÃ²ng STS, RTG, RS, EH.`, `Missing the ${type} row. Keep all four: STS, RTG, RS, EH.`)
+        text(lang, `Thiếu dòng ${type}. Giữ đúng bốn dòng STS, RTG, RS, EH.`, `Missing the ${type} row. Keep all four: STS, RTG, RS, EH.`)
       );
     }
   });
@@ -1284,7 +1284,7 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
   const quayLength = bag.terminal.quayLength || 0;
   const craneRecords = readKeyedTable(craneSheet, specs[SHEET.cranes], errors, lang, SHEET.cranes);
   if (!craneRecords.length && !errors.some((e) => e.sheet === SHEET.cranes && e.row === 2)) {
-    pushError(errors, SHEET.cranes, 0, text(lang, 'Cáº§n Ã­t nháº¥t má»™t cáº©u bá».', 'At least one quay crane is required.'));
+    pushError(errors, SHEET.cranes, 0, text(lang, 'Cần ít nhất một cẩu bờ.', 'At least one quay crane is required.'));
   }
   const cranes = parseCranes(craneRecords, errors, lang, SHEET.cranes, quayLength).map(
     ({ sourceRow, ...crane }) => crane
@@ -1293,11 +1293,11 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
   const maintRecords = readKeyedTable(maintSheet, specs[SHEET.maintenance], errors, lang, SHEET.maintenance);
   const usedMaint = new Set();
   const lockZones = maintRecords.map(({ row, obj }) => {
-    const fromMeter = needNumber(errors, lang, SHEET.maintenance, row, text(lang, 'Tá»« mÃ©t', 'From meter'), obj.fromMeter, {
+    const fromMeter = needNumber(errors, lang, SHEET.maintenance, row, text(lang, 'Từ mét', 'From meter'), obj.fromMeter, {
       min: 0,
       max: 5000,
     });
-    const lengthM = needNumber(errors, lang, SHEET.maintenance, row, text(lang, 'Chiá»u dÃ i', 'Length'), obj.lengthM, {
+    const lengthM = needNumber(errors, lang, SHEET.maintenance, row, text(lang, 'Chiều dài', 'Length'), obj.lengthM, {
       min: 1,
       max: 5000,
     });
@@ -1308,25 +1308,25 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
         row,
         text(
           lang,
-          `Äoáº¡n báº£o trÃ¬ vÆ°á»£t quÃ¡ cáº§u chÃ­nh ${quayLength} m.`,
+          `Đoạn bảo trì vượt quá cầu chính ${quayLength} m.`,
           `The maintenance stretch exceeds the main quay of ${quayLength} m.`
         )
       );
     }
     return {
       id: needId(obj.id, 'mnt', usedMaint),
-      reason: readText(obj.reason) || text(lang, 'Báº£o trÃ¬', 'Maintenance'),
+      reason: readText(obj.reason) || text(lang, 'Bảo trì', 'Maintenance'),
       fromMeter: fromMeter ?? 0,
       lengthM: lengthM ?? 0,
       capacityPct:
-        needNumber(errors, lang, SHEET.maintenance, row, text(lang, 'NÄƒng lá»±c cÃ²n', 'Remaining capacity'), obj.capacityPct, {
+        needNumber(errors, lang, SHEET.maintenance, row, text(lang, 'Năng lực còn', 'Remaining capacity'), obj.capacityPct, {
           min: 0,
           max: 100,
         }) ?? 0,
-      etbDay: needDay(errors, lang, SHEET.maintenance, row, text(lang, 'Tá»« ngÃ y', 'From day'), obj.etbDay),
-      etbTime: needTime(errors, lang, SHEET.maintenance, row, text(lang, 'Tá»« giá»', 'From time'), obj.etbTime),
-      etdDay: needDay(errors, lang, SHEET.maintenance, row, text(lang, 'Äáº¿n ngÃ y', 'To day'), obj.etdDay),
-      etdTime: needTime(errors, lang, SHEET.maintenance, row, text(lang, 'Äáº¿n giá»', 'To time'), obj.etdTime),
+      etbDay: needDay(errors, lang, SHEET.maintenance, row, text(lang, 'Từ ngày', 'From day'), obj.etbDay),
+      etbTime: needTime(errors, lang, SHEET.maintenance, row, text(lang, 'Từ giờ', 'From time'), obj.etbTime),
+      etdDay: needDay(errors, lang, SHEET.maintenance, row, text(lang, 'Đến ngày', 'To day'), obj.etdDay),
+      etdTime: needTime(errors, lang, SHEET.maintenance, row, text(lang, 'Đến giờ', 'To time'), obj.etdTime),
     };
   });
 
@@ -1344,23 +1344,23 @@ export function parseParameterWorkbook(buffer, locale = 'vi') {
   const externalBerths = extRecords.map(({ row, obj }) => {
     const name = readText(obj.name);
     if (!name) {
-      pushError(errors, SHEET.external, row, text(lang, 'TÃªn báº¿n thuÃª khÃ´ng Ä‘Æ°á»£c trá»‘ng.', 'Hired berth name is required.'));
+      pushError(errors, SHEET.external, row, text(lang, 'Tên bến thuê không được trống.', 'Hired berth name is required.'));
     }
     return {
       id: needId(obj.id, 'ext', usedExt),
       name,
       partner: readText(obj.partner),
-      quayLength: needNumber(errors, lang, SHEET.external, row, text(lang, 'Chiá»u dÃ i cáº§u', 'Quay length'), obj.quayLength, {
+      quayLength: needNumber(errors, lang, SHEET.external, row, text(lang, 'Chiều dài cầu', 'Quay length'), obj.quayLength, {
         min: 1,
         max: 5000,
       }),
-      draftM: needNumber(errors, lang, SHEET.external, row, text(lang, 'Má»›n nÆ°á»›c', 'Draft'), obj.draftM, {
+      draftM: needNumber(errors, lang, SHEET.external, row, text(lang, 'Mớn nước', 'Draft'), obj.draftM, {
         min: 0,
         max: 40,
       }),
       maxLoa: needNumber(errors, lang, SHEET.external, row, 'LOA', obj.maxLoa, { min: 1, max: 500 }),
-      towNm: needNumber(errors, lang, SHEET.external, row, text(lang, 'KÃ©o tÃ u', 'Tow'), obj.towNm, { min: 0, max: 500 }),
-      hireVnd: needNumber(errors, lang, SHEET.external, row, text(lang, 'GiÃ¡ thuÃª', 'Hire'), obj.hireVnd, { min: 0 }),
+      towNm: needNumber(errors, lang, SHEET.external, row, text(lang, 'Kéo tàu', 'Tow'), obj.towNm, { min: 0, max: 500 }),
+      hireVnd: needNumber(errors, lang, SHEET.external, row, text(lang, 'Giá thuê', 'Hire'), obj.hireVnd, { min: 0 }),
     };
   });
 

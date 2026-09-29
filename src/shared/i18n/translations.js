@@ -1,4 +1,4 @@
-import { guideEn, guideVi, opsEn, opsVi } from './opsCopy';
+import { guideEn, guideVi, opsEn, opsVi } from './opsCopy.js';
 
 export const LOCALES = ['vi', 'en'];
 
@@ -706,15 +706,15 @@ export const translations = {
         occ: 'Chiếm cầu (m)',
         etb: 'ETB',
         etd: 'ETD',
-        netStay: 'Portstay tịnh (h)',
-        berthH: 'Giờ cầu (h)',
+        netStay: 'Portstay(h)',
+        berthH: 'Giờ cầu(h)',
         meterH: 'Mét-giờ',
         moves: 'Moves',
         pmph: 'PMPH',
-        crane: 'Mật độ cẩu',
+        crane: 'Mật độ',
         lineKind: 'Loại tuyến',
-        volumeChange: 'Lệch sản lượng %',
-        timeChange: 'Lệch giờ cập %',
+        volumeChange: 'Lệch SL(%)',
+        timeChange: 'Lệch GC(%)',
         berthSide: 'Hướng cập',
       },
       lineFixed: 'Cố định',

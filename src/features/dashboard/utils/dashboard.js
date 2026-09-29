@@ -1,4 +1,4 @@
-﻿import {
+import {
   dayIndex,
   toDayFraction,
   calcBerthCapacity,
@@ -125,7 +125,7 @@ function serviceTierMap(byService) {
 
 /**
  * Daily time-series from the weekly berth plan (scientific base for area charts).
- * X = Monâ€¦Sun; Y = arrivals, concurrent quay meters, MH load, tier mix, cumulatives.
+ * X = Mon…Sun; Y = arrivals, concurrent quay meters, MH load, tier mix, cumulatives.
  */
 export function buildWeeklyTimeSeries(services = [], enriched = [], byService = []) {
   const DAY_KEYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

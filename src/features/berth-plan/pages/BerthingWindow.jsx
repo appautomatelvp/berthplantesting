@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { calcBerthCapacity, dayIndex, toDayFraction } from '../../capacity/utils/index';
 import { useI18n } from '../../../shared/i18n/I18nContext';
@@ -928,7 +928,12 @@ export default function BerthingWindow({ model }) {
   return (
     <div className={`plan-shell ${selected || toolsOpen ? 'drawer-open' : ''}`}>
       <PageToolbar>
-        
+        <button type="button" className="btn" data-tip={t('tip.jumpNow')} onClick={jumpToNow}>
+          {t('window.jumpNow')}
+        </button>
+        <button type="button" className="btn" data-tip={t('tip.addService')} onClick={addService}>
+          {t('window.addService')}
+        </button>
         <button
           type="button"
           className={`chip ${toolsPanel === 'cranes' ? 'active' : ''}`}

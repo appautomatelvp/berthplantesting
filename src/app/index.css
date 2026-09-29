@@ -3826,17 +3826,19 @@ td.danger {
 }
 
 .berth-plan-drawer .field-check-grid.drawer-checks {
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: 1fr !important;
     gap: 0.4rem;
 }
 .berth-plan-drawer .field-check {
-    flex-direction: column-reverse !important;
-    align-items: flex-start !important;
+    display: flex;
+    flex-direction: row-reverse !important;
+    align-items: center !important;
     justify-content: space-between !important;
-    min-height: 70px;
-    padding: 0.5rem 0.6rem !important;
+    min-height: auto;
+    padding: 0.5rem 0.75rem !important;
     white-space: normal;
 }
 .berth-plan-drawer .field-check input[type="checkbox"] {
-    align-self: flex-end;
+    align-self: auto;
+    margin: 0 !important;
 }

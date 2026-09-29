@@ -1090,7 +1090,7 @@ select:focus {
   margin-top: 0.2rem;
 }
 
-/* Berthing window â€” continuous hour scroll */
+/* Berthing window — continuous hour scroll */
 .window-scroll {
   overflow: auto;
   border: 1px solid var(--line);

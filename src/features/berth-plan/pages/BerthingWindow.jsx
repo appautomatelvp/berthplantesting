@@ -44,7 +44,7 @@ function uid() {
 }
 
 function fmt(n, d = 1) {
-  if (!Number.isFinite(n)) return 'â€”';
+  if (!Number.isFinite(n)) return '—';
   return n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
 }
 
@@ -61,7 +61,7 @@ function buildBlockFacts(block, fields, t) {
   for (const key of fields) {
     switch (key) {
       case 'service':
-        push(key, '', block.service || 'â€”', true);
+        push(key, '', block.service || '—', true);
         break;
       case 'vessel':
         if (block.vesselName) push(key, '', block.vesselName);
@@ -70,7 +70,7 @@ function buildBlockFacts(block, fields, t) {
         push(
           key,
           '',
-          `${t(`days.${block.etbDay}`)} ${block.etbTime} â†’ ${t(`days.${block.etdDay}`)} ${block.etdTime}`
+          `${t(`days.${block.etbDay}`)} ${block.etbTime} → ${t(`days.${block.etdDay}`)} ${block.etdTime}`
         );
         break;
       case 'loa':
@@ -80,7 +80,7 @@ function buildBlockFacts(block, fields, t) {
         push(key, t('window.blockField.occupation'), fmt(block.occupation, 0));
         break;
       case 'berthRange':
-        push(key, t('window.blockField.berthRange'), `${fmt(block.fromMeter, 0)}â€“${fmt(block.toMeter, 0)}`);
+        push(key, t('window.blockField.berthRange'), `${fmt(block.fromMeter, 0)}–${fmt(block.toMeter, 0)}`);
         break;
       case 'volume':
         push(key, t('window.blockField.volume'), fmt(block.volume, 0));
@@ -125,7 +125,7 @@ function cloneServices(rows) {
   return rows.map((r) => ({ ...r }));
 }
 
-/** Intersection rectangles where two services occupy the same time Ã— quay segment. */
+/** Intersection rectangles where two services occupy the same time × quay segment. */
 function computeOverlapRegions(blocks) {
   const regions = [];
   for (let i = 0; i < blocks.length; i++) {
@@ -313,7 +313,7 @@ export default function BerthingWindow({ model }) {
     });
   }, []);
 
-  /** Click outside the side panel â†’ auto-collapse (chart stays usable while tools are open). */
+  /** Click outside the side panel → auto-collapse (chart stays usable while tools are open). */
   useEffect(() => {
     if (!selectedId && !toolsPanel) return;
     const onPointerDown = (e) => {
@@ -517,7 +517,7 @@ export default function BerthingWindow({ model }) {
         return;
       }
 
-      // Arrow nudge â€” Excel-like cell move
+      // Arrow nudge — Excel-like cell move
       if (!selectedIdRef.current) return;
       const row = servicesRef.current.find((s) => s.id === selectedIdRef.current);
       if (!row) return;
@@ -850,7 +850,7 @@ export default function BerthingWindow({ model }) {
       }
 
       if (d.mode === 'resize-loa' || d.mode === 'resize-loa-w') {
-        // Visual right (resize-loa) / left (resize-loa-w) â†’ change occupation width
+        // Visual right (resize-loa) / left (resize-loa-w) → change occupation width
         const meterEdge = clientXToMeter(e.clientX, plot, quay, meterDirection);
         const origTo = d.origFrom + d.origOcc;
         const minOcc = 40;
@@ -1124,7 +1124,7 @@ export default function BerthingWindow({ model }) {
                         width: pos.width,
                         opacity: hidden ? 0.08 : 1,
                       }}
-                      title={`${t('ops.bargeWindow')} ${Math.round(win.fromMeter)}â€“${Math.round(win.toMeter)} m`}
+                      title={`${t('ops.bargeWindow')} ${Math.round(win.fromMeter)}–${Math.round(win.toMeter)} m`}
                     >
                       {height >= 28 && (
                         <span>
@@ -1144,7 +1144,7 @@ export default function BerthingWindow({ model }) {
                   const dimLock = chartLayer === 'mother' || chartLayer === 'barge';
                   const tip = [
                     lz.reason || t('lockZone.title'),
-                    `${Math.round(lz.fromMeter)}â€“${Math.round(lz.toMeter)}m`,
+                    `${Math.round(lz.fromMeter)}–${Math.round(lz.toMeter)}m`,
                     `${lz.capacityPct}% ${t('lockZone.capacityShort')}`,
                   ].join('\n');
                   return (
@@ -1170,7 +1170,7 @@ export default function BerthingWindow({ model }) {
                       <div className="lock-zone-body">
                         <strong>{lz.reason || t('lockZone.title')}</strong>
                         <span>
-                          {Math.round(lz.lengthM)}m Â· {lz.capacityPct}%
+                          {Math.round(lz.lengthM)}m · {lz.capacityPct}%
                         </span>
                       </div>
                     </div>

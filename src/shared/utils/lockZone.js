@@ -1,8 +1,8 @@
 ﻿import { dayIndex, toDayFraction } from '../../features/capacity/utils/engine.js';
 
 /**
- * Lock zone = quay segment Ã— time window with reduced operating capacity.
- * capacityPct = remaining usable capacity of the zone (0â€“100).
+ * Lock zone = quay segment × time window with reduced operating capacity.
+ * capacityPct = remaining usable capacity of the zone (0–100).
  */
 
 export function clampLockZone(zone, quayLength) {

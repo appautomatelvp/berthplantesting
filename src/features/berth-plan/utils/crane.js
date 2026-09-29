@@ -39,7 +39,7 @@ export function clampCranePosition(positionM, quayLength) {
 
 /**
  * Drag clamp: keep position on quay AND do not cross neighbors by configured order.
- * Never changes `order` â€” only limits how far a crane may slide.
+ * Never changes `order` — only limits how far a crane may slide.
  */
 export function clampCraneDragPosition(craneId, positionM, cranes, quayLength) {
   const L = Math.max(CRANE_WIDTH_M, Number(quayLength) || 600);
@@ -68,7 +68,7 @@ export function clientXToCraneStart(clientX, plotRect, quayLength, direction) {
   const ratio = Math.min(1, Math.max(0, (clientX - plotRect.left) / plotRect.width));
   const meter =
     direction === 'ltr' ? ratio * L : (1 - ratio) * L;
-  // center of crane under cursor â†’ start = center - width/2
+  // center of crane under cursor → start = center - width/2
   return clampCranePosition(meter - CRANE_WIDTH_M / 2, L);
 }
 

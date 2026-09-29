@@ -1676,7 +1676,7 @@ select:focus {
 
 .plan-chart-full {
   flex: 1;
-  max-height: none;
+  max-height: calc(100dvh - 168px);
   height: calc(100dvh - 168px);
   border-radius: 10px;
   transition: height 180ms ease;
@@ -1684,6 +1684,7 @@ select:focus {
 
 .plan-shell.drawer-open .plan-chart-full {
   height: calc(100dvh - 168px);
+  max-height: calc(100dvh - 168px);
 }
 
 .crane-rail {

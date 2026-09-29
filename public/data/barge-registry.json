@@ -1,0 +1,1047 @@
+{
+  "TN01": {
+    "bks": "SG - 5830",
+    "tonnage": 2567,
+    "vendor": "Giang Nam"
+  },
+  "TN06": {
+    "bks": "SG - 4147",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "TN09": {
+    "bks": "SG - 4444",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "TN10": {
+    "bks": "SG - 5012",
+    "tonnage": 2279,
+    "vendor": "Giang Nam"
+  },
+  "TN12": {
+    "bks": "SG - 5389",
+    "tonnage": 1920,
+    "vendor": "Giang Nam"
+  },
+  "TN15": {
+    "bks": "SG - 5275",
+    "tonnage": 2564,
+    "vendor": "Giang Nam"
+  },
+  "TN16": {
+    "bks": "SG - 5346",
+    "tonnage": 2200,
+    "vendor": "Giang Nam"
+  },
+  "TN17": {
+    "bks": "SG - 5668",
+    "tonnage": 2240,
+    "vendor": "Giang Nam"
+  },
+  "TN18": {
+    "bks": "SG - 5969",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "TN19": {
+    "bks": "SG - 5786",
+    "tonnage": 2023,
+    "vendor": "Giang Nam"
+  },
+  "TN20": {
+    "bks": "SG - 5436",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "TN22": {
+    "bks": "SG - 5479",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "TN25": {
+    "bks": "SG - 5505",
+    "tonnage": 1080,
+    "vendor": "Giang Nam"
+  },
+  "TN26": {
+    "bks": "SG - 6355",
+    "tonnage": 2223,
+    "vendor": "Giang Nam"
+  },
+  "TN27": {
+    "bks": "SG - 6524",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "TN28": {
+    "bks": "SG - 7480",
+    "tonnage": 3200,
+    "vendor": "Giang Nam"
+  },
+  "TN29": {
+    "bks": "SG - 6606",
+    "tonnage": 3420,
+    "vendor": "Giang Nam"
+  },
+  "TN30": {
+    "bks": "SG - 4128",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "TN32": {
+    "bks": "SG - 6718",
+    "tonnage": 2368,
+    "vendor": "Giang Nam"
+  },
+  "TN36": {
+    "bks": "SG - 7880",
+    "tonnage": 3980,
+    "vendor": "Giang Nam"
+  },
+  "TN38": {
+    "bks": "SG - 6889",
+    "tonnage": 2227,
+    "vendor": "Giang Nam"
+  },
+  "TN39": {
+    "bks": "SG - 6892",
+    "tonnage": 2227,
+    "vendor": "Giang Nam"
+  },
+  "TN42": {
+    "bks": "SG - 7583",
+    "tonnage": 2340,
+    "vendor": "Giang Nam"
+  },
+  "TN45": {
+    "bks": "SG - 8839",
+    "tonnage": 2598,
+    "vendor": "Giang Nam"
+  },
+  "TN46": {
+    "bks": "SG - 8936",
+    "tonnage": 3700,
+    "vendor": "Giang Nam"
+  },
+  "TN48": {
+    "bks": "SG - 9091",
+    "tonnage": 3600,
+    "vendor": "Giang Nam"
+  },
+  "AT01": {
+    "bks": "SG-9432",
+    "tonnage": 3600,
+    "vendor": "Giang Nam"
+  },
+  "AT02": {
+    "bks": "SG-9546",
+    "tonnage": 3600,
+    "vendor": "Giang Nam"
+  },
+  "AT09": {
+    "bks": "SG-9672",
+    "tonnage": 3800,
+    "vendor": "Giang Nam"
+  },
+  "AT10": {
+    "bks": "SG-9872",
+    "tonnage": 4906.3,
+    "vendor": "Giang Nam"
+  },
+  "AT12": {
+    "bks": "SG-9855",
+    "tonnage": 4906.3,
+    "vendor": "Giang Nam"
+  },
+  "AT15": {
+    "bks": "SG-9852",
+    "tonnage": 4906.3,
+    "vendor": "Giang Nam"
+  },
+  "AT16": {
+    "bks": "SG-9968",
+    "tonnage": 4484.9,
+    "vendor": "Giang Nam"
+  },
+  "AT17": {
+    "bks": "SG-9969",
+    "tonnage": 4484.9,
+    "vendor": "Giang Nam"
+  },
+  "CM01": {
+    "bks": "SG - 5167",
+    "tonnage": 2020,
+    "vendor": "Giang Nam"
+  },
+  "CM02": {
+    "bks": "SG - 5929",
+    "tonnage": 2403,
+    "vendor": "Giang Nam"
+  },
+  "CM06": {
+    "bks": "SG - 5598",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "CM09": {
+    "bks": "SG - 5645",
+    "tonnage": 2255,
+    "vendor": "Giang Nam"
+  },
+  "CM10": {
+    "bks": "SG - 5688",
+    "tonnage": 2100,
+    "vendor": "Giang Nam"
+  },
+  "CM12": {
+    "bks": "SG - 5685",
+    "tonnage": 1955,
+    "vendor": "Giang Nam"
+  },
+  "CM15": {
+    "bks": "SG - 5596",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "CM16": {
+    "bks": "SG - 4909",
+    "tonnage": 2350,
+    "vendor": "Giang Nam"
+  },
+  "CM17": {
+    "bks": "SG - 5626",
+    "tonnage": 2070,
+    "vendor": "Giang Nam"
+  },
+  "CM18": {
+    "bks": "SG - 7571",
+    "tonnage": 2340,
+    "vendor": "Giang Nam"
+  },
+  "CM19": {
+    "bks": "SG - 5679",
+    "tonnage": 3248,
+    "vendor": "Giang Nam"
+  },
+  "CM20": {
+    "bks": "SG - 6138",
+    "tonnage": 3120,
+    "vendor": "Giang Nam"
+  },
+  "CM22": {
+    "bks": "SG - 5555",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "CM25": {
+    "bks": "SG - 6426",
+    "tonnage": 1705,
+    "vendor": "Giang Nam"
+  },
+  "CM26": {
+    "bks": "SG - 6365",
+    "tonnage": 2265,
+    "vendor": "Giang Nam"
+  },
+  "CM27": {
+    "bks": "SG - 7179",
+    "tonnage": 2290,
+    "vendor": "Giang Nam"
+  },
+  "CM28": {
+    "bks": "SG - 7559",
+    "tonnage": 3523,
+    "vendor": "Giang Nam"
+  },
+  "CM29": {
+    "bks": "SG - 7349",
+    "tonnage": 2350,
+    "vendor": "Giang Nam"
+  },
+  "CM30": {
+    "bks": "SG- 3366",
+    "tonnage": 1461,
+    "vendor": "Giang Nam"
+  },
+  "CM32": {
+    "bks": "SG - 6719",
+    "tonnage": 2368,
+    "vendor": "Giang Nam"
+  },
+  "CM36": {
+    "bks": "SG - 7900",
+    "tonnage": 3980,
+    "vendor": "Giang Nam"
+  },
+  "CM38": {
+    "bks": "SG - 6890",
+    "tonnage": 2227,
+    "vendor": "Giang Nam"
+  },
+  "CM39": {
+    "bks": "SG - 7139",
+    "tonnage": 2290,
+    "vendor": "Giang Nam"
+  },
+  "CM42": {
+    "bks": "SG - 7572",
+    "tonnage": 2340,
+    "vendor": "Giang Nam"
+  },
+  "CM45": {
+    "bks": "SG - 8869",
+    "tonnage": 3700,
+    "vendor": "Giang Nam"
+  },
+  "CM46": {
+    "bks": "SG - 9344",
+    "tonnage": 3600,
+    "vendor": "Giang Nam"
+  },
+  "CM48": {
+    "bks": "SG - 9161",
+    "tonnage": 3600,
+    "vendor": "Giang Nam"
+  },
+  "HQ17": {
+    "bks": "SG-8695",
+    "tonnage": 3800,
+    "vendor": "Giang Nam"
+  },
+  "HQ18": {
+    "bks": "SG-8758",
+    "tonnage": 3800,
+    "vendor": "Giang Nam"
+  },
+  "BC01": {
+    "bks": "SG-9422",
+    "tonnage": 2567,
+    "vendor": "Giang Nam"
+  },
+  "SP- ITC 01": {
+    "bks": "SG 8259",
+    "tonnage": 2425,
+    "vendor": "SPITC"
+  },
+  "SP- ITC 02": {
+    "bks": "SG 8260",
+    "tonnage": 2425,
+    "vendor": "SPITC"
+  },
+  "SP- ITC 04": {
+    "bks": "SG 8836",
+    "tonnage": 3723.4,
+    "vendor": "SPITC"
+  },
+  "SP- ITC 05": {
+    "bks": "GS 8851",
+    "tonnage": 3723.4,
+    "vendor": "SPITC"
+  },
+  "SP- ITC 06": {
+    "bks": "SG 8909",
+    "tonnage": 3723.4,
+    "vendor": "SPITC"
+  },
+  "SP- ITC 07": {
+    "bks": "SG 8980",
+    "tonnage": 3723.4,
+    "vendor": "SPITC"
+  },
+  "TMS06": {
+    "bks": "SG-5410",
+    "tonnage": 2400,
+    "vendor": "Transimex"
+  },
+  "TMS09": {
+    "bks": "SG-6653",
+    "tonnage": 1700,
+    "vendor": "Transimex"
+  },
+  "TMS172": {
+    "bks": "SG-6792",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS68": {
+    "bks": "SG-7264",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS18": {
+    "bks": "SG-6870",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS39": {
+    "bks": "SG-7753",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS99": {
+    "bks": "SG-7908",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS66": {
+    "bks": "SG-8159",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS38": {
+    "bks": "SG-8647",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS79": {
+    "bks": "SG-7604",
+    "tonnage": 2560,
+    "vendor": "Transimex"
+  },
+  "TMS200": {
+    "bks": "SG-9005",
+    "tonnage": 3750,
+    "vendor": "Transimex"
+  },
+  "TMS21": {
+    "bks": "SG-9373",
+    "tonnage": 3750,
+    "vendor": "Transimex"
+  },
+  "TMS22": {
+    "bks": "SG.9815",
+    "tonnage": 3750,
+    "vendor": "Transimex"
+  },
+  "Sowatco 10": {
+    "bks": "SG.0673",
+    "tonnage": 720,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 11": {
+    "bks": "SG.0669",
+    "tonnage": 720,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 12": {
+    "bks": "SG.0670",
+    "tonnage": 934,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 14": {
+    "bks": "SG.0671",
+    "tonnage": 726,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 15": {
+    "bks": "SG.2983",
+    "tonnage": 1767,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 16": {
+    "bks": "SG.2984",
+    "tonnage": 1767,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 17": {
+    "bks": "SG.3000",
+    "tonnage": 1767,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 18": {
+    "bks": "SG.3001",
+    "tonnage": 1767,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 20": {
+    "bks": "SG.5721",
+    "tonnage": 2280,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 24": {
+    "bks": "SG.5721",
+    "tonnage": 2660,
+    "vendor": "Sowatco"
+  },
+  "Sowatco 26": {
+    "bks": "SG.8036",
+    "tonnage": 2660,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Discover": {
+    "bks": "SG.8320",
+    "tonnage": 3600,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Explorer": {
+    "bks": "SG.8319",
+    "tonnage": 3600,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Header": {
+    "bks": "SG.8582",
+    "tonnage": 4988,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Leader": {
+    "bks": "SG.8583",
+    "tonnage": 4990,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Master": {
+    "bks": "SG.9472",
+    "tonnage": 4964,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Pioneer": {
+    "bks": "SG.9473",
+    "tonnage": 4964,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Jupiter": {
+    "bks": "SG.9966",
+    "tonnage": 4962,
+    "vendor": "Sowatco"
+  },
+  "Sowatco Venus": {
+    "bks": "SG.9967",
+    "tonnage": 4962,
+    "vendor": "Sowatco"
+  },
+  "ĐT-22942": {
+    "bks": "DT-22942",
+    "tonnage": 992,
+    "vendor": "Phước Tạo"
+  },
+  "KHÁNH HUY 5": {
+    "bks": "LA-05697",
+    "tonnage": 1328,
+    "vendor": "Phước Tạo"
+  },
+  "LA05535": {
+    "bks": "LA05535",
+    "tonnage": 1869,
+    "vendor": "Phước Tạo"
+  },
+  "LA07172": {
+    "bks": "LA-07172",
+    "tonnage": 2980,
+    "vendor": "Phước Tạo"
+  },
+  "MINH TƯỜNG": {
+    "bks": "LA-05239",
+    "tonnage": 1490,
+    "vendor": "Phước Tạo"
+  },
+  "PHI LONG 09": {
+    "bks": "LA-06520",
+    "tonnage": 980,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 07": {
+    "bks": "SG-7279",
+    "tonnage": 882,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 08": {
+    "bks": "SG-5453",
+    "tonnage": 1415,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 09": {
+    "bks": "SG-4857",
+    "tonnage": 1280,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 14": {
+    "bks": "SG-9284",
+    "tonnage": 600,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 15": {
+    "bks": "SG-8838",
+    "tonnage": 1690,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 16": {
+    "bks": "SG-8442",
+    "tonnage": 1172,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 17": {
+    "bks": "LA-07868",
+    "tonnage": 0,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 18": {
+    "bks": "LA-07712",
+    "tonnage": 1325,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 20": {
+    "bks": "SG-4069",
+    "tonnage": 950,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 24": {
+    "bks": "LA-08055",
+    "tonnage": 734,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 25": {
+    "bks": "LA-05770",
+    "tonnage": 1207,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 26": {
+    "bks": "SG-8901",
+    "tonnage": 680,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 27": {
+    "bks": "LA-07489",
+    "tonnage": 2735,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 29": {
+    "bks": "LA-07299",
+    "tonnage": 1450,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 30": {
+    "bks": "LA-08119",
+    "tonnage": 750,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 32": {
+    "bks": "SG9659",
+    "tonnage": 2899,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 38": {
+    "bks": "LA-07621",
+    "tonnage": 2985,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 45": {
+    "bks": "SG-8789",
+    "tonnage": 930,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 5": {
+    "bks": "LA-97413",
+    "tonnage": 680,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 59": {
+    "bks": "SG-5554",
+    "tonnage": 2011,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC TẠO 68": {
+    "bks": "BTR-5589",
+    "tonnage": 1986,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯƠNG NAM 08": {
+    "bks": "SG-4755",
+    "tonnage": 750,
+    "vendor": "Phước Tạo"
+  },
+  "TG-14759": {
+    "bks": "TG-14759",
+    "tonnage": 1440,
+    "vendor": "Phước Tạo"
+  },
+  "THUẬN LỢI": {
+    "bks": "TV-2899",
+    "tonnage": 1295,
+    "vendor": "Phước Tạo"
+  },
+  "PHƯỚC LONG 16": {
+    "bks": "SG-3178",
+    "tonnage": 1487,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 18": {
+    "bks": "SG-3220",
+    "tonnage": 1420,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 20": {
+    "bks": "SG-5044",
+    "tonnage": 1421,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 22": {
+    "bks": "SG-4992",
+    "tonnage": 0,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 24": {
+    "bks": "SG-5250",
+    "tonnage": 0,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 26": {
+    "bks": "SG-5376",
+    "tonnage": 1421,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 28": {
+    "bks": "SG-3467",
+    "tonnage": 1813,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 30": {
+    "bks": "SG-3501",
+    "tonnage": 1800,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 32": {
+    "bks": "SG-3452",
+    "tonnage": 1800,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 34": {
+    "bks": "SG-3468",
+    "tonnage": 1800,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 60": {
+    "bks": "SG-9334",
+    "tonnage": 4585,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 62": {
+    "bks": "SG-9372",
+    "tonnage": 4585,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 64": {
+    "bks": "SG-9456",
+    "tonnage": 4585,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 66": {
+    "bks": "SG-9476",
+    "tonnage": 4585,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 68": {
+    "bks": "SG-9649",
+    "tonnage": 4585,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 70": {
+    "bks": "SG-9666",
+    "tonnage": 4585,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 72": {
+    "bks": "SG-9838",
+    "tonnage": 4603,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 74": {
+    "bks": "SG-9895",
+    "tonnage": 4603,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 76": {
+    "bks": "SG-9930",
+    "tonnage": 4603,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 78": {
+    "bks": "SG-9866",
+    "tonnage": 4603,
+    "vendor": "PIP"
+  },
+  "PHƯỚC LONG 80": {
+    "bks": "SG-9931",
+    "tonnage": 4603,
+    "vendor": "PIP"
+  },
+  "MEKONG 17": {
+    "bks": "TG-23838",
+    "tonnage": 4700,
+    "vendor": "PIP"
+  },
+  "MEKONG 89": {
+    "bks": "SG-7667",
+    "tonnage": 2744,
+    "vendor": "PIP"
+  },
+  "THÀNH ĐẠI 01": {
+    "bks": "SG-9397",
+    "tonnage": 4650,
+    "vendor": "PIP"
+  },
+  "SÔNG XANH 09": {
+    "bks": "BV-1517",
+    "tonnage": 2000,
+    "vendor": "PIP"
+  },
+  "SÔNG XANH 18": {
+    "bks": "BV-0506",
+    "tonnage": 2000,
+    "vendor": "PIP"
+  },
+  "ĐỨC PHONG": {
+    "bks": "LA-08180",
+    "tonnage": 4876.8,
+    "vendor": "PIP"
+  },
+  "KHANG THỊNH 1555": {
+    "bks": "SG-7890",
+    "tonnage": 3006,
+    "vendor": "PIP"
+  },
+  "MEKONG 18": {
+    "bks": "LA-08218",
+    "tonnage": 4415.6,
+    "vendor": "PIP"
+  },
+  "LA 08046": {
+    "bks": "LA-08046",
+    "tonnage": 4222.6,
+    "vendor": "PIP"
+  },
+  "ĐẠT LONG 02": {
+    "bks": "SG-9379",
+    "tonnage": 4650,
+    "vendor": "PIP"
+  },
+  "ĐẠT LONG 10": {
+    "bks": "SG-10069",
+    "tonnage": 4678.84,
+    "vendor": "PIP"
+  },
+  "ĐẠT LONG 12": {
+    "bks": "SG-9856",
+    "tonnage": 4230,
+    "vendor": "PIP"
+  },
+  "ĐẠT LONG 16": {
+    "bks": "SG-10124",
+    "tonnage": 4678.84,
+    "vendor": "PIP"
+  },
+  "DONG NAI 01": {
+    "bks": "SG-7821",
+    "tonnage": 2208,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 03": {
+    "bks": "SG-8670",
+    "tonnage": 3303,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 05": {
+    "bks": "SG-8442",
+    "tonnage": 3303,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 06": {
+    "bks": "VL-14470",
+    "tonnage": 990,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 07": {
+    "bks": "VL-14733",
+    "tonnage": 1950,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 08": {
+    "bks": "VL-14759",
+    "tonnage": 3361,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 09": {
+    "bks": "VL-14561",
+    "tonnage": 3360,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 10": {
+    "bks": "VL-12858",
+    "tonnage": 1630,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 11": {
+    "bks": "TV-4069",
+    "tonnage": 2405,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 13": {
+    "bks": "HGi-5559",
+    "tonnage": 2600,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 18": {
+    "bks": "VL-14313",
+    "tonnage": 1804,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 19": {
+    "bks": "SG-7757",
+    "tonnage": 2580,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 20": {
+    "bks": "SG-8236",
+    "tonnage": 2781,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 22": {
+    "bks": "VL-15131",
+    "tonnage": 2390,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 26": {
+    "bks": "VL-15108",
+    "tonnage": 2180,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 28": {
+    "bks": "VL-14895",
+    "tonnage": 2895,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 29": {
+    "bks": "HGi-5467",
+    "tonnage": 2524,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 30": {
+    "bks": "VL-14393",
+    "tonnage": 1937,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 32": {
+    "bks": "AG-24064",
+    "tonnage": 2108,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 33": {
+    "bks": "SG-6819",
+    "tonnage": 2015,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 35": {
+    "bks": "TV-3358",
+    "tonnage": 3380,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 36": {
+    "bks": "LA-07521",
+    "tonnage": 2800,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 37": {
+    "bks": "TV-4068",
+    "tonnage": 2443,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 38": {
+    "bks": "SG-9210",
+    "tonnage": 3663,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 40": {
+    "bks": "LA-08036",
+    "tonnage": 4110,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 41": {
+    "bks": "HT-1151",
+    "tonnage": 2400,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 42": {
+    "bks": "HT-1149",
+    "tonnage": 2213,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 45": {
+    "bks": "VL-15562",
+    "tonnage": 3379,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 46": {
+    "bks": "SG-7910",
+    "tonnage": 2475,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 47": {
+    "bks": "AG-21463",
+    "tonnage": 2497,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 48": {
+    "bks": "AG-22396",
+    "tonnage": 2610,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 59": {
+    "bks": "SG-9259",
+    "tonnage": 4650,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 61": {
+    "bks": "SG-9339",
+    "tonnage": 4650,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 62": {
+    "bks": "SG-7737",
+    "tonnage": 2290,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 68": {
+    "bks": "SG-5368",
+    "tonnage": 2542,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 70": {
+    "bks": "VL-15342",
+    "tonnage": 3121,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 71": {
+    "bks": "VL-15366",
+    "tonnage": 3092,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 72": {
+    "bks": "LA-05679",
+    "tonnage": 3436,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 77": {
+    "bks": "TV-0999",
+    "tonnage": 3380,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 81": {
+    "bks": "LA-08181",
+    "tonnage": 4422,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 84": {
+    "bks": "SG-9084",
+    "tonnage": 3358,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 89": {
+    "bks": "SG-8992",
+    "tonnage": 0,
+    "vendor": "DONG NAI"
+  },
+  "DONG NAI 91": {
+    "bks": "TG-23737",
+    "tonnage": 4230,
+    "vendor": "DONG NAI"
+  }
+}

@@ -1,0 +1,16 @@
+# Dependencies & build
+node_modules/
+dist/
+
+# Local / editor
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+
+# Deploy platforms (local-only project — do not commit)
+.vercel/
+.vercelignore
+vercel.json
+.netlify/

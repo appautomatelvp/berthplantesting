@@ -1,0 +1,2533 @@
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc, getDoc } from 'firebase/firestore';
+import { getAuth, onAuthStateChanged, signInAnonymously, signInWithCustomToken } from 'firebase/auth';
+import { 
+  Ship, Anchor, Clock, Package, Info, Plus, Trash2, 
+  Save, Navigation, ClipboardList, AlertCircle, MapPin, 
+  ArrowRight, Settings2, Activity, Database, 
+  Download, LayoutDashboard, History, MoveHorizontal, Zap, Maximize2, Layers, Crosshair, ChevronsUp, ChevronsDown,
+  ZoomIn, ZoomOut, Focus, Hand, EyeOff, Eye, Search, X, UploadCloud, FileText, CheckCircle, ScanSearch, Printer, ChevronLeft, ChevronRight,
+  Lock, Unlock, Image as ImageIcon, Check, CalendarDays, Minus
+} from 'lucide-react';
+
+// --- CONFIGURATION DATA ---
+const CMIT_BOLLARDS = [
+  { id: 1, pos: 6 }, { id: 2, pos: 24 }, { id: 3, pos: 42 }, { id: 4, pos: 59 },
+  { id: 5, pos: 77 }, { id: 6, pos: 95 }, { id: 7, pos: 113 }, { id: 8, pos: 131 },
+  { id: 9, pos: 148 }, { id: 10, pos: 166 }, { id: 11, pos: 184 }, { id: 12, pos: 202 },
+  { id: 13, pos: 220 }, { id: 14, pos: 237 }, { id: 15, pos: 255 }, { id: 16, pos: 273 },
+  { id: 17, pos: 291 }, { id: 18, pos: 309 }, { id: 19, pos: 326 }, { id: 20, pos: 344 },
+  { id: 21, pos: 362 }, { id: 22, pos: 380 }, { id: 23, pos: 398 }, { id: 24, pos: 415 },
+  { id: 25, pos: 433 }, { id: 26, pos: 451 }, { id: 27, pos: 469 }, { id: 28, pos: 487 },
+  { id: 29, pos: 504 }, { id: 30, pos: 522 }, { id: 31, pos: 540 }, { id: 32, pos: 558 },
+  { id: 33, pos: 576 }, { id: 34, pos: 599 }
+];
+
+const QC_RANGES = [
+  { id: 'qc7', name: 'QC07', start: 15, end: 430, color: '#8b5cf6' },
+  { id: 'qc1', name: 'QC01', start: 30, end: 458, color: '#2563eb' },
+  { id: 'qc2', name: 'QC02', start: 58, end: 486, color: '#eab308' },
+  { id: 'qc3', name: 'QC03', start: 86, end: 514, color: '#166534' },
+  { id: 'qc4', name: 'QC04', start: 220, end: 542, color: '#22c55e' },
+  { id: 'qc5', name: 'QC05', start: 248, end: 570, color: '#84cc16' },
+  { id: 'qc6', name: 'QC06', start: 276, end: 585, color: '#dc2626' },
+];
+
+const BARGE_PRESETS = [
+  { loa: 57, bays: '3 BAYS' },
+  { loa: 87, bays: '5 BAYS' },
+  { loa: 75, bays: '4.5 BAYS' },
+  { loa: 81, bays: '4.5 BAYS' },
+  { loa: 69, bays: '4 BAYS' },
+  { loa: 63, bays: '3.5 BAYS' },
+  { loa: 45, bays: '2 BAYS' }
+];
+
+const RAW_VESSELS = [
+  { name: "ADRIAN MAERSK", loa: 352, remark: "- Bay 02, 06: đứng dưới giật được lớp 5\n- Bay 10 -> 70: giật được lớp 6\n- Bay 74 -> lái: giật đươc lớp 5\n- Từ bay 21 -> mũi, lashing bridege 2 tier", flipHC: "- Flip HCs: 2 nắp hầm sông và bờ không thể đặt lên nắp giữa", twistlock: "GÙ 1 DÂY", reeferMotor: "ALL FACING AFT", gearBoxes: "9 X 20'", keelToHatch: "", keelToNav: "", keelToMast: "", bowToCabin: 249 },
+  { name: "CAUQUENES", loa: 300, remark: "Cabin giữa bay 26-30, ống khói giữa bay 54-58", flipHC: "", twistlock: "GÙ TỰ ĐỘNG", reeferMotor: "", gearBoxes: "6X20'", keelToHatch: "", keelToNav: "", keelToMast: "", bowToCabin: 127 },
+  { name: "VUNG TAU EXPRESS", loa: 300, remark: "Arrival draft: Fwd-11.70m & Aft-11.90m.", flipHC: "", twistlock: "SEMI-AUTOMATIC TWIST LOCKS", reeferMotor: "ALL FACING AFT", gearBoxes: "", keelToHatch: "27.25", keelToNav: "49.75", keelToMast: "", bowToCabin: 211 },
+  { name: "ACX CRYSTAL", loa: 200 }
+];
+
+const INITIAL_MASTER_VESSEL_DB = RAW_VESSELS.map(v => ({ 
+    remark: "", flipHC: "", twistlock: "", reeferMotor: "", gearBoxes: "", keelToHatch: "", keelToNav: "", keelToMast: "", bowToCabin: 0, 
+    ...v,
+    name: String(v.name).toUpperCase()
+}));
+
+const PRESET_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#eab308', '#9333ea', '#db2777', '#ea580c', '#0d9488'];
+
+// Fix cứng ID ứng dụng để tất cả các phiên bản (kể cả khi copy/share link) đều trỏ về chung 1 CSDL
+const appId = 'CMIT_BERTH_PLANNER_MAIN';
+
+const firebaseConfig = { 
+    apiKey: "AIzaSyBXRwurRyERLg_bdZKcLtLr68UpalQkEeA", 
+    authDomain: "cmit-berth-planner.firebaseapp.com", 
+    projectId: "cmit-berth-planner", 
+    storageBucket: "cmit-berth-planner.firebasestorage.app", 
+    messagingSenderId: "43356799872", 
+    appId: "1:43356799872:web:86d1daac85a9b6e2def765" 
+};
+
+// --- GLOBAL UTILITY COMPONENTS ---
+const InputField = ({ label, value, onChange, type = "text", placeholder = "", forceUpper = true, disabled = false }) => (
+  <div className="flex flex-col gap-1 w-full h-full">
+    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{String(label || '')}</label>
+    <input 
+        type={type} 
+        value={value !== undefined && value !== null ? value : ''} 
+        placeholder={placeholder} 
+        disabled={disabled}
+        onChange={(e) => { 
+            let val = e.target.value;
+            if (type === "number") {
+                val = val === '' ? '' : Number(val);
+            } else if (forceUpper && type !== "datetime-local") {
+                val = String(val).toUpperCase();
+            }
+            onChange(val); 
+        }} 
+        className={`w-full rounded-xl px-4 py-3 text-sm font-bold text-[#002D54] outline-none transition-all select-text h-full
+            ${type !== 'datetime-local' ? 'uppercase' : ''}
+            ${disabled ? 'bg-slate-100/50 border border-slate-200/60 text-slate-600 shadow-none' : 'bg-white border border-blue-200 focus:ring-2 focus:ring-blue-500 shadow-inner'}`} 
+    />
+  </div>
+);
+
+const TextAreaField = ({ label, value, onChange, disabled = false }) => {
+  const textareaRef = useRef(null);
+
+  const adjustHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value]);
+
+  return (
+    <div className="flex flex-col gap-1 w-full">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{String(label || '')}</label>
+      <textarea 
+          ref={textareaRef}
+          value={value || ''} 
+          disabled={disabled}
+          rows={1}
+          onChange={(e) => {
+              onChange(String(e.target.value).toUpperCase());
+              adjustHeight();
+          }} 
+          className={`w-full rounded-xl px-4 py-3 text-sm font-bold text-[#002D54] outline-none transition-all resize-none overflow-hidden uppercase select-text leading-relaxed
+              ${disabled ? 'bg-slate-100/50 border border-slate-200/60 text-slate-600 shadow-none' : 'bg-yellow-50/50 border border-yellow-400 focus:ring-2 focus:ring-yellow-500 shadow-inner'}`} 
+      />
+    </div>
+  );
+};
+
+const SmallInputField = ({ label, value, onChange, type = "text" }) => (
+  <div className="flex flex-col gap-0.5">
+    <label className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{String(label || '')}</label>
+    <input type={type} value={value !== undefined && value !== null ? value : ''} onChange={(e) => { 
+        let val = e.target.value;
+        if (type === "number") {
+            val = val === '' ? '' : Number(val);
+        } else if (type !== "datetime-local") {
+            val = String(val).toUpperCase(); 
+        }
+        onChange(val); 
+    }} className={`w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold text-[#002D54] focus:ring-2 focus:ring-blue-500 outline-none transition-all select-text ${type !== 'datetime-local' ? 'uppercase' : ''}`} />
+  </div>
+);
+
+const SummaryRow = ({ label, value, color = "slate" }) => (
+  <div className="flex justify-between items-center py-3 border-b border-slate-100">
+    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{String(label || '')}</span>
+    <span className={`text-xs font-black text-${color}-700 uppercase`}>{String(value || '')}</span>
+  </div>
+);
+
+// --- HELPER FUNCTIONS ---
+const getMooringSpace = (v, percent = 6) => v?.type === 'vessel' ? Math.round((v.loa || 0) * (percent / 100)) : 0;
+
+const getMooringBollards = (vessel, percent = 6) => {
+    if (!vessel || vessel.bowPos < -200) return { bowBollard: { id: '-', pos: 0 }, sternBollard: { id: '-', pos: 0 }, rightBollard: { id: '-', pos: 0 }, leftBollard: { id: '-', pos: 0 } };
+    const mooringLen = getMooringSpace(vessel, percent);
+    const rightEdge = vessel.bowPos;
+    const validRight = CMIT_BOLLARDS.filter(b => b.pos <= rightEdge - mooringLen);
+    const rightBollard = validRight.length > 0 ? validRight.reduce((max, b) => b.pos > max.pos ? b : max, validRight[0]) : CMIT_BOLLARDS[0]; 
+    const leftEdge = vessel.sternPos;
+    const validLeft = CMIT_BOLLARDS.filter(b => b.pos >= leftEdge + mooringLen);
+    const leftBollard = validLeft.length > 0 ? validLeft.reduce((min, b) => b.pos < min.pos ? b : min, validLeft[0]) : CMIT_BOLLARDS[CMIT_BOLLARDS.length - 1]; 
+    const isPS = vessel.side === 'PS';
+    const bowBollard = isPS ? leftBollard : rightBollard;
+    const sternBollard = isPS ? rightBollard : leftBollard;
+    return { bowBollard, sternBollard, rightBollard, leftBollard };
+};
+
+const getClearance = (vA, vB, percent = 6) => {
+    if (vA?.type === 'barge' && vB?.type === 'barge') return 2; 
+    return (getMooringSpace(vA, percent) || 2) + (getMooringSpace(vB, percent) || 2); 
+};
+
+const findFreePosition = (newVesselObj, currentVessels, percent = 6) => {
+    const sameTier = currentVessels.filter(v => (v.tier || 1) === newVesselObj.tier).sort((a, b) => a.bowPos - b.bowPos);
+    let candidatePos = 0; 
+    for (const v of sameTier) {
+        const clearance = getClearance(newVesselObj, v, percent);
+        if (candidatePos + newVesselObj.loa <= v.bowPos - clearance) return candidatePos; 
+        candidatePos = v.sternPos + clearance; 
+    }
+    return candidatePos; 
+};
+
+const getAvailableColor = (currentVessels) => {
+    const usedColors = currentVessels.map(v => v.color);
+    const available = PRESET_COLORS.find(c => !usedColors.includes(c));
+    return available || PRESET_COLORS[currentVessels.length % PRESET_COLORS.length];
+};
+
+const getCurrentDateTimeLocal = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+};
+
+const getEtdFallback = (etaStr) => {
+    const etaDate = etaStr ? new Date(etaStr) : new Date();
+    const etdDate = new Date(etaDate.getTime() + 24 * 60 * 60 * 1000); // Mặc định +24h
+    etdDate.setMinutes(etdDate.getMinutes() - etdDate.getTimezoneOffset());
+    return etdDate.toISOString().slice(0, 16);
+}
+
+const fixTypos = (text) => {
+    if (!text) return "";
+    let res = String(text).toUpperCase();
+    res = res.replace(/GUU|GUÙ|GÙI/g, "GÙ");
+    res = res.replace(/GÙ\s*1 DÂY/g, "1 DÂY"); 
+    res = res.replace(/1 DÂY/g, "GÙ 1 DÂY");
+    return res.trim();
+};
+
+const parseSmartRemark = (remarkText, vessel) => {
+    if (!remarkText) return {};
+    const updates = {};
+    const text = remarkText.toUpperCase();
+    const extractNumber = (regex) => {
+        const match = text.match(regex);
+        if (match && match[1]) {
+            return match[1].replace(/,/g, '.');
+        }
+        return null;
+    };
+    const hatch = extractNumber(/KEEL\s+TO\s+HATCH[^\d]*?(\d+([.,]\d+)?)/);
+    if (hatch) updates.keelToHatch = hatch;
+    const nav = extractNumber(/KEEL\s+TO\s+NAV[^\d]*?(\d+([.,]\d+)?)/);
+    if (nav) updates.keelToNav = nav;
+    const mast = extractNumber(/KEEL\s+TO\s+(?:TOP|ACCOMMODATION)[^\d]*?(\d+([.,]\d+)?)/);
+    if (mast) updates.keelToMast = mast;
+    const sternBridge = extractNumber(/DISTANCE\s+FROM\s+STERN[^\d]*?(\d+([.,]\d+)?)/);
+    if (sternBridge && vessel && vessel.loa) {
+        updates.bowToCabin = Math.round(vessel.loa - parseFloat(sternBridge));
+    }
+    const bowBridge = extractNumber(/DISTANCE\s+FROM\s+BOW[^\d]*?(\d+([.,]\d+)?)/);
+    if (bowBridge) updates.bowToCabin = Math.round(parseFloat(bowBridge));
+    const tlMatch = text.match(/(?:TWIST\s*LOCK|TWISTLOCK)[^:：\-]*[:：\-]\s*([^.\n]+)/);
+    if (tlMatch) {
+        let tlStr = tlMatch[1].replace(/(?:TYPE|TWIST\s*LOCK\s*TYPE|TWISTLOCK\s*TYPE)/g, '').trim();
+        updates.twistlock = fixTypos(tlStr);
+    }
+    const reeferMatch = text.match(/REEFER\s*MOTOR[^:：\-]*[:：\-]\s*([^.\n]+)/);
+    if (reeferMatch) {
+        let cleanReefer = reeferMatch[1].replace(/DIRECTION/g, '').trim();
+        updates.reeferMotor = cleanReefer;
+    }
+    return updates;
+};
+
+const compressImage = (base64Str, maxWidth = 800, quality = 0.6) => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = base64Str;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            if (width > maxWidth) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+    });
+};
+
+
+// --- MAIN APP ---
+const App = () => {
+  const [db, setDb] = useState(null);
+  const [userId, setUserId] = useState(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('visual'); 
+  const [historyPlans, setHistoryPlans] = useState([]);
+  const [allVoyages, setAllVoyages] = useState([]);
+  const [toastMsg, setToastMsg] = useState('');
+  
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 }); 
+  const mapContainerRef = useRef(null);
+  const innerMapRef = useRef(null);
+
+  const totalVisLength = 1200; 
+  const bufferLength = 300; 
+
+  const [masterVessels, setMasterVessels] = useState(INITIAL_MASTER_VESSEL_DB);
+
+  const [vessels, setVessels] = useState([]);
+  
+  const [activeVesselId, setActiveVesselId] = useState(null);
+  const activeVessel = vessels.find(v => v?.id === activeVesselId) || vessels[0] || null;
+
+  const [qcTasks, setQcTasks] = useState(QC_RANGES.map((qc, idx) => ({
+    id: qc.id, name: qc.name, lane: String(4 - (idx % 3)), notes: 'SẴN SÀNG.', pos: qc.start + 50, color: qc.color, rangeStart: qc.start, rangeEnd: qc.end, boomDown: true, isSafeMode: false, selected: false
+  })));
+
+  const [isDragging, setIsDragging] = useState(false);
+  const isDraggingRef = useRef(false); 
+  const dragStartRef = useRef({ id: null, type: null, bowPos: 0, pos: 0, startX: 0, startY: 0, cabinOffset: 0, lastData: null, lastQcData: null, startPanX: 0, startPanY: 0, hasMoved: false });
+  
+  const [showBargeMenu, setShowBargeMenu] = useState(false);
+  const [mooringPercent, setMooringPercent] = useState(6);
+  const [showVesselModal, setShowVesselModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // SCHEDULE VIEW CONFIG
+  const [scheduleDays, setScheduleDays] = useState(7);
+  const [scheduleStartDate, setScheduleStartDate] = useState(() => {
+      const d = new Date();
+      d.setHours(0,0,0,0);
+      return d;
+  });
+
+  const [isPrintMode, setIsPrintMode] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [showPdfModal, setShowPdfModal] = useState(false);
+  const [pdfConfig, setPdfConfig] = useState({
+      showQcRanges: false,
+      showBargeLabels: false,
+      showVesselLabels: true,
+      showMooringLines: true,
+      scale: 125
+  });
+
+  const [showNewVesselForm, setShowNewVesselForm] = useState(false);
+  const [newVesselData, setNewVesselData] = useState({ name: '', loa: '', side: 'SB', eta: '', etd: '' });
+  const [formError, setFormError] = useState('');
+
+  const fileInputRef = useRef(null);
+  const [uploadMsg, setUploadMsg] = useState('');
+
+  const [isVesselUnlocked, setIsVesselUnlocked] = useState(false);
+  const [vesselPin, setVesselPin] = useState('');
+
+  const aiImageInputRef = useRef(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResultText, setAiResultText] = useState('');
+  const [aiError, setAiError] = useState('');
+  const [aiSuccessMsg, setAiSuccessMsg] = useState('');
+  const [pendingAiDistance, setPendingAiDistance] = useState(null);
+  const [pendingAiImage, setPendingAiImage] = useState(null);
+  const [activeVesselImage, setActiveVesselImage] = useState(null);
+
+  const [clickCount, setClickCount] = useState(0);
+  const [isSetupMode, setIsSetupMode] = useState(false);
+  const clickTimeoutRef = useRef(null);
+
+  const [uiState, setUiState] = useState({
+      listExpanded: false,
+      detailsExpanded: false,
+      qcExpanded: true
+  });
+  const toggleUi = (key) => setUiState(prev => ({ ...prev, [key]: !prev[key] }));
+  
+  const [isAutoExpand, setIsAutoExpand] = useState(true);
+  const [showGuideLines, setShowGuideLines] = useState(true); // NEW STATE: Toggle guide lines in visual map
+  
+  const nudgeIntervalRef = useRef(null);
+  const isTypingRef = useRef(false);
+  const pendingSnapshotRef = useRef(null);
+
+  const handleTitleClick = () => {
+    setClickCount((prev) => {
+      const next = prev + 1;
+      if (next >= 10) {
+        setIsSetupMode((mode) => !mode);
+        return 0;
+      }
+      return next;
+    });
+
+    if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
+    clickTimeoutRef.current = setTimeout(() => {
+      setClickCount(0);
+    }, 2000);
+  };
+
+  const saveSetupConfig = () => {
+      syncToCloud(vessels, qcTasks);
+      setIsSetupMode(false);
+  };
+
+  const processSnapshot = (data) => {
+      if (data.vessels && Array.isArray(data.vessels) && data.vessels.length > 0) {
+          const validVessels = data.vessels.filter(v => v && v.id).map(v => {
+              if (!v.etd) {
+                  return { ...v, etd: getEtdFallback(v.eta) };
+              }
+              return v;
+          });
+          setVessels(validVessels);
+          if (activeVesselId && !validVessels.find(v => v.id === activeVesselId)) {
+              setActiveVesselId(null);
+          }
+      } else {
+          setVessels([]);
+      }
+      if (data.qcs && Array.isArray(data.qcs)) {
+          const updatedQcs = data.qcs.filter(q => q && q.id).map(q => {
+              const rangeMatch = QC_RANGES.find(r => r.id === q.id) || { start: 15, end: 585, color: '#94a3b8' };
+              const clampedPos = Math.max(15, Math.min(585, q.pos ?? (rangeMatch.start + 50)));
+              return { ...q, pos: clampedPos, boomDown: q.boomDown ?? true, isSafeMode: q.isSafeMode ?? false, selected: q.selected ?? false, rangeStart: q.rangeStart ?? rangeMatch.start, rangeEnd: q.rangeEnd ?? rangeMatch.end, color: rangeMatch.color };
+          });
+          if(updatedQcs.length > 0) setQcTasks(updatedQcs);
+      }
+      if (data.mooringPercent !== undefined) {
+          setMooringPercent(data.mooringPercent);
+      }
+  };
+
+  useEffect(() => {
+      const handleFocusIn = (e) => {
+          if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) isTypingRef.current = true;
+      };
+      const handleFocusOut = (e) => {
+          if (['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
+              isTypingRef.current = false;
+              if (pendingSnapshotRef.current) {
+                  processSnapshot(pendingSnapshotRef.current);
+                  pendingSnapshotRef.current = null;
+              }
+          }
+      };
+      document.addEventListener('focusin', handleFocusIn);
+      document.addEventListener('focusout', handleFocusOut);
+      return () => {
+          document.removeEventListener('focusin', handleFocusIn);
+          document.removeEventListener('focusout', handleFocusOut);
+      };
+  }, []);
+
+  useEffect(() => {
+    const app = initializeApp(firebaseConfig);
+    const database = getFirestore(app);
+    const authentication = getAuth(app);
+    setDb(database);
+    const initAuth = async () => {
+      try {
+        await signInAnonymously(authentication);
+      } catch (error) {
+        console.error("Auth error:", error);
+        // Degrade gracefully: let UI run even when auth service is unavailable.
+        setIsAuthReady(true);
+      }
+    };
+    const unsubAuth = onAuthStateChanged(
+      authentication,
+      (user) => {
+        if (user) setUserId(String(user.uid));
+        setIsAuthReady(true);
+      },
+      (error) => {
+        console.error("Auth state error:", error);
+        setIsAuthReady(true);
+      }
+    );
+    const authTimeout = setTimeout(() => setIsAuthReady(true), 5000);
+    initAuth();
+    return () => {
+      clearTimeout(authTimeout);
+      unsubAuth();
+    };
+  }, []);
+
+  useEffect(() => {
+      if (!isAuthReady || !db || !activeVessel?.name) return;
+      const fetchImage = async () => {
+          try {
+              const vesselNameKey = activeVessel.name.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+              const imgRef = doc(db, 'artifacts', appId, 'public', 'data', 'vesselImages', vesselNameKey);
+              const imgSnap = await getDoc(imgRef);
+              if (imgSnap.exists() && imgSnap.data().base64) {
+                  setActiveVesselImage(imgSnap.data().base64);
+              } else {
+                  setActiveVesselImage(null);
+              }
+          } catch (e) {
+              console.error("Error fetching image:", e);
+              setActiveVesselImage(null);
+          }
+      };
+      fetchImage();
+  }, [isAuthReady, db, activeVessel?.name]);
+
+  useEffect(() => {
+    if (!isAuthReady || !db) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+
+    const masterDbRef = doc(db, 'artifacts', appId, 'public', 'data', 'vesselMasterDB', 'database');
+    const unsubMaster = onSnapshot(masterDbRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data.vessels && Array.isArray(data.vessels)) {
+                setMasterVessels(data.vessels.filter(v => v && v.name)); 
+            }
+        }
+    }, (error) => console.error("Error Master DB", error));
+
+    const planDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'vesselPlans', 'currentPlan');
+    const unsubCurrent = onSnapshot(planDocRef, (snapshot) => {
+      if (snapshot.exists() && !isDraggingRef.current && !isSetupMode) { 
+        const data = snapshot.data();
+        if (isTypingRef.current) {
+            pendingSnapshotRef.current = data;
+        } else {
+            processSnapshot(data);
+        }
+      }
+      setLoading(false);
+    }, (error) => {
+      console.error("Error Current Plan", error);
+      setLoading(false);
+    });
+
+    const historyColRef = collection(db, 'artifacts', appId, 'public', 'data', 'vesselHistory');
+    const unsubHistory = onSnapshot(historyColRef, (snapshot) => {
+      const plans = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setHistoryPlans(plans.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)));
+    }, (error) => console.error("Error History", error));
+
+    const voyagesColRef = collection(db, 'artifacts', appId, 'public', 'data', 'vesselVoyages');
+    const unsubVoyages = onSnapshot(voyagesColRef, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setAllVoyages(data);
+    }, (error) => console.error("Error Voyages", error));
+
+    return () => { unsubCurrent(); unsubHistory(); unsubMaster(); unsubVoyages(); };
+  }, [isAuthReady, db, userId, activeVesselId, isSetupMode]); 
+
+  const activeVesselVoyages = useMemo(() => {
+      if (!activeVessel?.name) return [];
+      const key = activeVessel.name.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+      return allVoyages
+        .filter(v => v.vesselNameKey === key)
+        .sort((a, b) => new Date(b.savedAt || 0) - new Date(a.savedAt || 0));
+  }, [allVoyages, activeVessel?.name]);
+
+  useEffect(() => {
+      const handleAfterPrint = () => { setIsPrintMode(false); };
+      window.addEventListener('afterprint', handleAfterPrint);
+      return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, []);
+
+  const handleAutoCenter = () => { setPanOffset({ x: 0, y: 0 }); };
+  useEffect(() => { handleAutoCenter(); }, [zoomLevel, activeTab]);
+
+  const loadPdfLibraries = async () => {
+      const promises = [];
+      if (!window.htmlToImage) {
+          promises.push(new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js';
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+          }));
+      }
+      if (!window.jspdf) {
+          promises.push(new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+              script.onload = resolve;
+              script.onerror = reject;
+              document.head.appendChild(script);
+          }));
+      }
+      return Promise.all(promises);
+  };
+
+  const openPdfOptions = () => { setShowPdfModal(true); };
+
+  const executePdfExport = async () => {
+      setShowPdfModal(false);
+      setActiveTab('visual');
+      setIsPrintMode(true);
+      setIsExportingPDF(true);
+      
+      setTimeout(async () => {
+          try {
+              await loadPdfLibraries();
+              const element = document.getElementById('vessel-map-export');
+              if (element) {
+                  const dataUrl = await window.htmlToImage.toPng(element, { quality: 1.0, pixelRatio: 2, backgroundColor: '#ffffff' });
+                  const { jsPDF } = window.jspdf;
+                  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+                  const pdfWidth = pdf.internal.pageSize.getWidth();
+                  const pdfHeight = pdf.internal.pageSize.getHeight();
+                  const margin = 5;
+                  const availWidth = pdfWidth - (margin * 2);
+                  const availHeight = pdfHeight - (margin * 2);
+                  const baseRatio = Math.min(availWidth / 1200, availHeight / 700);
+                  const userScaleFactor = (pdfConfig.scale || 125) / 100;
+                  const finalWidth = 1200 * baseRatio * userScaleFactor;
+                  const finalHeight = 700 * baseRatio * userScaleFactor;
+                  const xOffset = margin + (availWidth - finalWidth) / 2;
+                  const yOffset = margin + (availHeight - finalHeight) / 2;
+
+                  pdf.addImage(dataUrl, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
+                  pdf.save(`KeHoachBen_CMIT_${new Date().getTime()}.pdf`);
+              }
+          } catch (error) {
+              console.error("Lỗi xuất PDF:", error);
+              alert("Lỗi tạo PDF. Vui lòng kiểm tra kết nối mạng để tải thư viện.");
+          } finally {
+              setIsPrintMode(false);
+              setIsExportingPDF(false);
+          }
+      }, 1000);
+  };
+
+  const callGeminiVision = async (base64Data, loa) => {
+    const apiKey = ""; 
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    const prompt = `Bạn là một chuyên gia AI về Thị giác Máy tính và Hàng hải. Nhiệm vụ của bạn là phân tích hình ảnh tàu biển và tính toán khoảng cách vật lý từ "Mũi tàu" (Bow) đến "TÂM CỦA CABIN" (Center of Accommodation Block).\n\nLOA: ${loa} mét.\n\nĐẦU RA BẮT BUỘC: \nRESULT_METERS: [X]`;
+    const payload = { contents: [{ role: "user", parts: [ { text: prompt }, { inlineData: { mimeType: "image/jpeg", data: base64Data } } ] }] };
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    for (let attempt = 0; attempt < 6; attempt++) {
+        try {
+            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const data = await response.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        } catch (error) {
+            if (attempt === 5) throw new Error("Lỗi kết nối Server AI sau nhiều lần thử.");
+            await new Promise(res => setTimeout(res, delays[attempt]));
+        }
+    }
+  };
+
+  const handleAiImageUpload = (e) => {
+      const file = e.target.files[0];
+      if(!file || !activeVessel) return;
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+          const base64Full = event.target.result;
+          setAiLoading(true); setAiError(''); setAiSuccessMsg(''); 
+          setPendingAiDistance(null); setPendingAiImage(null);
+          setAiResultText('Đang nén ảnh và gửi cho AI xử lý (Có thể mất 10-15s)...');
+          try {
+              const compressedBase64Full = await compressImage(base64Full, 800, 0.6);
+              const compressedDataOnly = compressedBase64Full.split(',')[1];
+              const resultText = await callGeminiVision(compressedDataOnly, activeVessel.loa || 200);
+              setAiResultText(resultText);
+              const match = resultText.match(/RESULT_METERS:\s*([0-9.]+)/i) || resultText.match(/ước tính là:\s*([0-9.]+)/i);
+              if (match && match[1]) {
+                  setPendingAiDistance(parseFloat(match[1]));
+                  setPendingAiImage(compressedBase64Full);
+                  setAiSuccessMsg(`Thành công! Khoảng cách Mũi -> Cabin = ${parseFloat(match[1])}m.`);
+              } else {
+                  setAiError('AI đã trả về kết quả nhưng hệ thống không thể tự động trích xuất con số.');
+              }
+          } catch(err) { setAiError(err.message); setAiResultText(''); } 
+          finally { setAiLoading(false); if(aiImageInputRef.current) aiImageInputRef.current.value = ''; }
+      };
+      reader.readAsDataURL(file);
+  };
+
+  const confirmAndSaveAiResult = async () => {
+      if (!pendingAiDistance || !activeVessel) return;
+      let newCabinPos;
+      if (activeVessel.side === 'PS') {
+          newCabinPos = (activeVessel.sternPos || 0) - pendingAiDistance;
+      } else {
+          newCabinPos = (activeVessel.bowPos || 0) + pendingAiDistance;
+      }
+      updateActiveVessel({ bowToCabin: pendingAiDistance, cabinPos: newCabinPos });
+      if (pendingAiImage && db && isAuthReady) {
+          try {
+              const vesselNameKey = activeVessel.name.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+              const imgRef = doc(db, 'artifacts', appId, 'public', 'data', 'vesselImages', vesselNameKey);
+              await setDoc(imgRef, { base64: pendingAiImage, savedAt: new Date().toISOString() });
+              setActiveVesselImage(pendingAiImage);
+          } catch (e) { console.error("Lỗi khi lưu ảnh lên Cloud:", e); }
+      }
+      setPendingAiDistance(null); setPendingAiImage(null);
+      setAiSuccessMsg('Đã lưu dữ liệu AI và hình ảnh vào hồ sơ!');
+      setTimeout(() => setAiSuccessMsg(''), 3000);
+  };
+
+  const syncToCloud = async (vData, qData, pData) => {
+    if (!db || !isAuthReady) return;
+    try { await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vesselPlans', 'currentPlan'), { vessels: vData || vessels, qcs: qData || qcTasks, mooringPercent: pData !== undefined ? pData : mooringPercent, updatedAt: new Date().toISOString() }); } catch (e) { console.error(e); }
+  };
+
+  const saveToHistory = async () => {
+    if (!db || !isAuthReady) return;
+    try { 
+        const planId = `Plan_${Date.now()}`;
+        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vesselHistory', planId), { vessels, qcs: qcTasks, mooringPercent, updatedAt: new Date().toISOString(), updatedBy: userId }); 
+        for (const v of vessels) {
+            if (!v.name || !v.voyage || v.voyage === 'TBU' || v.voyage === '-') continue;
+            const vesselNameKey = v.name.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+            const voyageKey = v.voyage.replace(/[^a-zA-Z0-9]/g, '_').toUpperCase();
+            const docId = `${vesselNameKey}_${voyageKey}`;
+            const voyageRef = doc(db, 'artifacts', appId, 'public', 'data', 'vesselVoyages', docId);
+            await setDoc(voyageRef, { ...v, vesselNameKey, savedAt: new Date().toISOString(), planId: planId });
+        }
+        setToastMsg('Đã lưu Kế hoạch & Hồ sơ chuyến thành công!');
+        setTimeout(() => setToastMsg(''), 4000);
+    } catch (err) { 
+        setToastMsg('Lỗi khi lưu dữ liệu lên đám mây!');
+        setTimeout(() => setToastMsg(''), 4000);
+    }
+  };
+
+  const updateActiveVessel = (updates) => {
+    const newVessels = vessels.map(v => v.id === activeVesselId ? { ...v, ...updates } : v);
+    setVessels(newVessels); syncToCloud(newVessels);
+  };
+
+  const handleAutoExtractRemark = () => {
+      if (!activeVessel || !activeVessel.remark) return;
+      const extractedUpdates = parseSmartRemark(activeVessel.remark, activeVessel);
+      if (Object.keys(extractedUpdates).length > 0) {
+          if (extractedUpdates.bowToCabin !== undefined) {
+              if (activeVessel.side === 'PS') {
+                  extractedUpdates.cabinPos = (activeVessel.sternPos || 0) - extractedUpdates.bowToCabin;
+              } else {
+                  extractedUpdates.cabinPos = (activeVessel.bowPos || 0) + extractedUpdates.bowToCabin;
+              }
+          }
+          updateActiveVessel(extractedUpdates);
+          setToastMsg('Đã bóc tách thông số từ Ghi chú thành công!');
+          setTimeout(() => setToastMsg(''), 3000);
+      } else { alert('Hệ thống chưa tìm thấy thông số hợp lệ!'); }
+  };
+
+  const addNewVessel = () => {
+    setShowVesselModal(true); setUploadMsg(''); setSearchQuery('');
+    setShowNewVesselForm(false); setFormError('');
+    if (!uiState.listExpanded) toggleUi('listExpanded');
+  };
+
+  const triggerNewVesselForm = (defaultName = '') => {
+    const curEta = getCurrentDateTimeLocal();
+    const curEtd = getEtdFallback(curEta);
+    setNewVesselData({ name: defaultName || searchQuery.toUpperCase(), loa: '', side: 'SB', eta: curEta, etd: curEtd });
+    setShowNewVesselForm(true);
+    setFormError('');
+  };
+
+  const handleCreateNewVessel = () => {
+    if (!newVesselData.name.trim()) { setFormError('Vui lòng nhập Tên Tàu!'); return; }
+    if (!newVesselData.loa || newVesselData.loa <= 0) { setFormError('Vui lòng nhập LOA hợp lệ (lớn hơn 0)!'); return; }
+    if (!newVesselData.side) { setFormError('Vui lòng chọn Mạn Cập!'); return; }
+
+    const newLoa = Number(newVesselData.loa);
+    const newType = 'vessel';
+    const newTier = 1;
+    const freeBowPos = findFreePosition({ loa: newLoa, type: newType, tier: newTier }, vessels, mooringPercent);
+    const etaVal = newVesselData.eta || getCurrentDateTimeLocal();
+
+    const newVessel = { 
+        id: `vessel-${Date.now()}-${Math.floor(Math.random()*1000)}`, type: newType, tier: newTier, 
+        name: newVesselData.name.trim().toUpperCase(), voyage: "TBU", loa: newLoa, 
+        eta: etaVal, etd: newVesselData.etd || getEtdFallback(etaVal),
+        berthName: "CMIT", side: newVesselData.side, direction: "THƯỢNG LƯU", 
+        bowPos: freeBowPos, sternPos: freeBowPos + newLoa, cabinPos: freeBowPos + (newLoa*0.8), 
+        dis: 0, load: 0, hue: (vessels.length * 80 + 200) % 360,
+        color: getAvailableColor(vessels),
+        bowToCabin: Math.round(newLoa * 0.8), keelToHatch: "", keelToNav: "", keelToMast: "",
+        twistlock: "", reeferMotor: "", flipHC: "", gearBoxes: "", remark: ""
+    };
+    setVessels([...vessels, newVessel]); setActiveVesselId(newVessel.id); syncToCloud([...vessels, newVessel]);
+    setUiState(prev => ({ ...prev, detailsExpanded: true }));
+    setShowVesselModal(false); setShowNewVesselForm(false);
+  };
+
+  const addVesselFromDB = (dbVessel) => {
+    const newLoa = dbVessel.loa || 200;
+    const newType = 'vessel';
+    const newTier = 1;
+    const freeBowPos = findFreePosition({ loa: newLoa, type: newType, tier: newTier }, vessels, mooringPercent);
+    const bowCabinRounded = Math.round(dbVessel.bowToCabin || newLoa * 0.8);
+    const etaVal = getCurrentDateTimeLocal();
+
+    const newVessel = {
+        id: `vessel-${Date.now()}-${Math.floor(Math.random()*1000)}`, type: newType, tier: newTier, name: String(dbVessel.name || 'TÀU DB').toUpperCase(), voyage: "TBU", loa: newLoa,
+        eta: etaVal, etd: getEtdFallback(etaVal), berthName: "CMIT", side: "SB", direction: "THƯỢNG LƯU",
+        bowPos: freeBowPos, sternPos: freeBowPos + newLoa, cabinPos: Math.round(freeBowPos + bowCabinRounded),
+        dis: 0, load: 0, hue: (vessels.length * 80 + 200) % 360,
+        color: getAvailableColor(vessels),
+        bowToCabin: bowCabinRounded,
+        keelToHatch: String(dbVessel.keelToHatch || "").toUpperCase(),
+        keelToNav: String(dbVessel.keelToNav || "").toUpperCase(),
+        keelToMast: String(dbVessel.keelToMast || "").toUpperCase(),
+        twistlock: String(dbVessel.twistlock || "").toUpperCase(),
+        reeferMotor: String(dbVessel.reeferMotor || "").toUpperCase(),
+        flipHC: String(dbVessel.flipHC || "").toUpperCase(),
+        gearBoxes: String(dbVessel.gearBoxes || "").toUpperCase(),
+        remark: String(dbVessel.remark || "").toUpperCase()
+    };
+    setVessels([...vessels, newVessel]); setActiveVesselId(newVessel.id); syncToCloud([...vessels, newVessel]);
+    setUiState(prev => ({ ...prev, detailsExpanded: true }));
+    setShowVesselModal(false);
+  };
+
+  const handleFileUpload = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      setUploadMsg('Đang tải thư viện xử lý Excel...');
+      try {
+          if (!window.XLSX) {
+              await new Promise((resolve, reject) => {
+                  const script = document.createElement('script');
+                  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                  script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
+              });
+          }
+          setUploadMsg('Đang nạp hàng trăm con tàu...');
+          const reader = new FileReader();
+          reader.onload = async (event) => {
+              try {
+                  const data = new Uint8Array(event.target.result);
+                  const workbook = window.XLSX.read(data, { type: 'array' });
+                  const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                  const jsonData = window.XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                  if (jsonData.length === 0) { setUploadMsg('Lỗi: File trống!'); return; }
+                  const newVessels = [];
+                  for (let i = 0; i < jsonData.length; i++) {
+                      const row = jsonData[i];
+                      const normalizedRow = {};
+                      for (let key in row) normalizedRow[key.trim().toLowerCase()] = row[key];
+                      const nameKey = Object.keys(normalizedRow).find(k => ['vessel name', 'tên tàu', 'vessel', 'name'].some(match => k.includes(match)));
+                      if (!nameKey || !normalizedRow[nameKey]) continue; 
+                      const findCol = (keywords) => { const key = Object.keys(normalizedRow).find(k => keywords.some(match => k.includes(match))); return key ? normalizedRow[key] : ""; };
+                      const name = String(normalizedRow[nameKey]).trim().toUpperCase();
+                      const remarkRaw = String(findCol(['remark', 'ghi chú', 'all info'])).toUpperCase();
+                      let parsedData = {
+                          name: name, loa: parseFloat(findCol(['loa', 'chiều dài'])) || 200, remark: remarkRaw,
+                          flipHC: String(findCol(['flip'])).toUpperCase(), twistlock: fixTypos(String(findCol(['twislock', 'twistlock']))), 
+                          reeferMotor: String(findCol(['reefer'])).toUpperCase(), gearBoxes: String(findCol(['gear'])).toUpperCase(),
+                          keelToHatch: String(findCol(['hatch'])).toUpperCase(), keelToNav: String(findCol(['navigation', 'nav'])).toUpperCase(),
+                          keelToMast: String(findCol(['mast'])).toUpperCase(), bowToCabin: Math.round(parseFloat(findCol(['cabin', 'mũi-cabin'])) || 0), 
+                      };
+                      const smartUpdates = parseSmartRemark(remarkRaw, { loa: parsedData.loa });
+                      Object.assign(parsedData, smartUpdates);
+                      newVessels.push(parsedData);
+                  }
+                  if (newVessels.length === 0) { setUploadMsg('Lỗi: Không tìm thấy tên tàu.'); return; }
+                  const uniqueMap = new Map();
+                  masterVessels.forEach(v => uniqueMap.set(String(v.name).toUpperCase(), v));
+                  let addedCount = 0, updatedCount = 0;
+                  newVessels.forEach(nv => {
+                      const key = nv.name.toUpperCase();
+                      if (uniqueMap.has(key)) { updatedCount++; uniqueMap.set(key, { ...uniqueMap.get(key), ...nv }); } 
+                      else { addedCount++; uniqueMap.set(key, nv); }
+                  });
+                  const updatedDB = Array.from(uniqueMap.values());
+                  setMasterVessels(updatedDB);
+                  if (db && isAuthReady) {
+                      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vesselMasterDB', 'database'), { vessels: updatedDB });
+                      setUploadMsg(`Thành công: Nạp ${addedCount}, Cập nhật ${updatedCount}!`);
+                  }
+              } catch (err) { setUploadMsg('Lỗi đọc file: ' + err.message); }
+              if (fileInputRef.current) fileInputRef.current.value = '';
+          };
+          reader.readAsArrayBuffer(file);
+      } catch (error) { setUploadMsg('LỖI: KHÔNG TẢI ĐƯỢC THƯ VIỆN.'); }
+  };
+
+  const handleExportExcel = async () => {
+      setUploadMsg('ĐANG TẠO FILE EXCEL...');
+      try {
+          if (!window.ExcelJS) {
+              await new Promise((resolve, reject) => {
+                  const script = document.createElement('script'); script.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js';
+                  script.onload = resolve; script.onerror = reject; document.head.appendChild(script);
+              });
+          }
+          const workbook = new window.ExcelJS.Workbook();
+          const worksheet = workbook.addWorksheet('MASTER_VESSELS');
+          worksheet.columns = [
+              { header: 'VESSEL NAME', key: 'name', width: 22 }, { header: 'LOA (M)', key: 'loa', width: 8 },
+              { header: 'MŨI-CABIN', key: 'bowToCabin', width: 12 }, { header: 'TWISTLOCK', key: 'twistlock', width: 18 },
+              { header: 'FLIP H/C', key: 'flipHC', width: 22 }, { header: 'KEEL TO HATCH COVER', key: 'keelToHatch', width: 14 },
+              { header: 'KEEL TO NAV DECK', key: 'keelToNav', width: 14 }, { header: 'KEEL TO TOP MAST', key: 'keelToMast', width: 14 },
+              { header: 'REEFER MOTOR', key: 'reeferMotor', width: 15 }, { header: 'GEAR BOXES', key: 'gearBoxes', width: 14 },
+              { header: 'REMARK', key: 'remark', width: 40 } 
+          ];
+          safeMasterVessels.forEach(v => { worksheet.addRow(v); });
+          const buffer = await workbook.xlsx.writeBuffer();
+          const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = `BANG_THONG_SO_TAU.xlsx`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a); window.URL.revokeObjectURL(url);
+          setUploadMsg('XUẤT EXCEL THÀNH CÔNG!');
+      } catch (error) { setUploadMsg('LỖI XUẤT EXCEL!'); }
+  };
+
+  const addBarge = (preset) => {
+    const newLoa = preset.loa;
+    const newType = 'barge';
+    const newTier = 1; 
+    const freeBowPos = findFreePosition({ loa: newLoa, type: newType, tier: newTier }, vessels, mooringPercent);
+    const etaVal = getCurrentDateTimeLocal();
+
+    const newBarge = { 
+        id: `barge-${Date.now()}-${Math.floor(Math.random()*1000)}`, type: newType, tier: newTier, name: String(preset.bays).toUpperCase(), voyage: "-", loa: newLoa, 
+        eta: etaVal, etd: getEtdFallback(etaVal), berthName: "CMIT", side: "SB", direction: "THƯỢNG LƯU", 
+        bowPos: freeBowPos, sternPos: freeBowPos + newLoa, cabinPos: freeBowPos + newLoa - 5, 
+        dis: 0, load: 0, hue: (vessels.length * 50 + 20) % 360,
+        color: getAvailableColor(vessels)
+    };
+    setVessels([...vessels, newBarge]); setActiveVesselId(newBarge.id); setShowBargeMenu(false); syncToCloud([...vessels, newBarge]);
+    setUiState(prev => ({ ...prev, detailsExpanded: true }));
+    if (!uiState.listExpanded) toggleUi('listExpanded');
+  }
+
+  const removeVessel = (idToRemove) => {
+      const newVessels = vessels.filter(v => v.id !== idToRemove);
+      setVessels(newVessels); 
+      if (activeVesselId === idToRemove) setActiveVesselId(null);
+      syncToCloud(newVessels);
+  }
+
+  useEffect(() => {
+    let syncTimeout;
+    const handleKeyDown = (e) => {
+        if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+        if (e.key === 'Delete' && activeVesselId) { removeVessel(activeVesselId); return; }
+        if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && activeVesselId && (activeTab === 'visual' || activeTab === 'schedule')) {
+            e.preventDefault(); 
+            const direction = e.key === 'ArrowLeft' ? 1 : -1; 
+            setVessels(prev => {
+                const v = prev.find(x => x.id === activeVesselId);
+                if (!v) return prev;
+                const step = e.shiftKey ? 5 : 1;
+                const newBow = v.bowPos + (direction * step);
+                const constrainedBow = Math.max(-250, Math.min(850 - (v.loa || 200), newBow));
+                const newStern = constrainedBow + (v.loa || 200);
+
+                let isColliding = false;
+                const others = prev.filter(x => x.id !== activeVesselId && (x.tier || 1) === (v.tier || 1));
+                const dummyVessel = { ...v, bowPos: constrainedBow, sternPos: newStern };
+                
+                for (const other of others) {
+                    const clearance = getClearance(dummyVessel, other, mooringPercent);
+                    if (!(newStern <= other.bowPos - clearance || constrainedBow >= other.sternPos + clearance)) {
+                        isColliding = true; break;
+                    }
+                }
+                if (isColliding) return prev; 
+                const updated = prev.map(x => x.id === activeVesselId ? {
+                    ...x, bowPos: constrainedBow, sternPos: newStern, cabinPos: Math.round(constrainedBow + (x.cabinPos - x.bowPos))
+                } : x);
+                clearTimeout(syncTimeout);
+                syncTimeout = setTimeout(() => { syncToCloud(updated, qcTasks); }, 500);
+                return updated;
+            });
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => { window.removeEventListener('keydown', handleKeyDown); clearTimeout(syncTimeout); };
+  }, [activeVesselId, vessels, activeTab, mooringPercent, qcTasks]);
+
+  const deleteFromHistory = async (id) => { if(db) await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'vesselHistory', id)); }
+
+  const getVesselStyles = (vessel) => {
+      if (vessel.color) return { color: vessel.color, rank: 0 };
+      const idx = vessels.findIndex(v => v.id === vessel.id);
+      return { color: PRESET_COLORS[Math.max(0, idx) % PRESET_COLORS.length], rank: 0 };
+  }
+
+  const toggleQcSelection = (id) => {
+      const newQcs = qcTasks.map(q => q.id === id ? { ...q, selected: !q.selected } : q);
+      setQcTasks(newQcs); syncToCloud(vessels, newQcs);
+  };
+
+  const setBoomState = (isDown, isSafe) => {
+      const newQcs = qcTasks.map(q => q.selected ? { ...q, boomDown: isDown, isSafeMode: isSafe } : q);
+      setQcTasks(newQcs); syncToCloud(vessels, newQcs);
+  };
+
+  const autoGatherCranesForVessel = (targetVesselId) => {
+      const targetV = vessels.find(v => v.id === targetVesselId);
+      if(!targetV) return;
+      const targetCenter = targetV.bowPos + targetV.loa / 2;
+      setQcTasks(prev => {
+          const sortedQcs = [...prev].sort((a, b) => a.pos - b.pos);
+          const selectedIndices = [];
+          sortedQcs.forEach((qc, idx) => { if (qc.selected) selectedIndices.push(idx); });
+          if (selectedIndices.length === 0) return prev;
+          
+          const spacing = 35; 
+          const firstSelIdx = selectedIndices[0]; 
+          const lastSelIdx = selectedIndices[selectedIndices.length - 1]; 
+          const blockWidth = (lastSelIdx - firstSelIdx) * spacing;
+          const startPos = targetCenter - blockWidth / 2;
+          
+          let newPositions = sortedQcs.map(q => q.pos);
+          for (let i = firstSelIdx; i <= lastSelIdx; i++) newPositions[i] = startPos + (i - firstSelIdx) * spacing;
+          for (let i = firstSelIdx - 1; i >= 0; i--) {
+              if (newPositions[i] > newPositions[i + 1] - spacing) newPositions[i] = newPositions[i + 1] - spacing;
+          }
+          for (let i = lastSelIdx + 1; i < sortedQcs.length; i++) {
+              if (newPositions[i] < newPositions[i - 1] + spacing) newPositions[i] = newPositions[i - 1] + spacing;
+          }
+
+          const N = sortedQcs.length;
+          if (newPositions[0] < 15) { const diff = 15 - newPositions[0]; for (let i = 0; i < N; i++) newPositions[i] += diff; }
+          if (newPositions[N - 1] > 585) { const diff = newPositions[N - 1] - 585; for (let i = 0; i < N; i++) newPositions[i] -= diff; }
+
+          const newQcs = sortedQcs.map((qc, i) => {
+              if (qc.selected) return { ...qc, pos: newPositions[i], boomDown: false, isSafeMode: true }; 
+              return { ...qc, pos: newPositions[i] }; 
+          });
+          syncToCloud(vessels, newQcs);
+          return newQcs;
+      });
+  };
+
+  const handleSafeBoomClick = () => {
+      if (activeVessel) autoGatherCranesForVessel(activeVessel.id);
+      else setBoomState(false, true);
+  };
+
+  const handleMouseDown = (e, type, id) => {
+    if ((activeTab !== 'visual' && activeTab !== 'schedule') || isPrintMode) return;
+    
+    if (type === 'map' || type === 'scheduleMap') {
+        setActiveVesselId(null); 
+        isDraggingRef.current = true; setIsDragging(true);
+        dragStartRef.current = { type, startX: e.clientX, startY: e.clientY, startPanX: panOffset.x, startPanY: panOffset.y, hasMoved: false };
+        return;
+    }
+
+    e.preventDefault(); e.stopPropagation();
+    isDraggingRef.current = true; setIsDragging(true);
+    
+    if (type === 'vessel') {
+        setActiveVesselId(id); 
+        const targetVessel = vessels.find(v => v.id === id);
+        if(targetVessel) {
+            dragStartRef.current = { 
+                type: 'vessel', id: id, bowPos: targetVessel.bowPos, 
+                startX: e.clientX, startY: e.clientY, cabinOffset: targetVessel.cabinPos - targetVessel.bowPos, lastData: vessels, hasMoved: false 
+            };
+        }
+    } else if (type === 'qc') {
+        const targetQc = qcTasks.find(q => q.id === id);
+        if(targetQc) {
+            dragStartRef.current = { type: 'qc', id: id, pos: targetQc.pos, startX: e.clientX, startY: e.clientY, lastQcData: qcTasks, hasMoved: false };
+        }
+    }
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDraggingRef.current || isPrintMode) return;
+      const type = dragStartRef.current.type;
+
+      if (!dragStartRef.current.hasMoved) {
+          if (Math.abs(e.clientX - dragStartRef.current.startX) > 3 || Math.abs(e.clientY - dragStartRef.current.startY) > 3) {
+              dragStartRef.current.hasMoved = true;
+              if (type === 'vessel' || type === 'barge') {
+                  setUiState({ listExpanded: false, detailsExpanded: false, qcExpanded: false });
+              }
+          }
+      }
+
+      if (type === 'map' || type === 'scheduleMap') {
+          const deltaX = e.clientX - dragStartRef.current.startX;
+          const deltaY = e.clientY - dragStartRef.current.startY;
+          setPanOffset({ x: dragStartRef.current.startPanX + deltaX, y: dragStartRef.current.startPanY + deltaY });
+          return;
+      }
+
+      if (!innerMapRef.current) return;
+      const rect = innerMapRef.current.getBoundingClientRect();
+      const baseWidth = rect.width / zoomLevel; 
+      const pixelsPerMeter = baseWidth / totalVisLength; 
+      const deltaX = (e.clientX - dragStartRef.current.startX) / zoomLevel; 
+      const deltaMeters = deltaX / pixelsPerMeter;
+      
+      if (type === 'vessel' && dragStartRef.current.lastData) {
+          const draggedVessel = dragStartRef.current.lastData.find(v => v.id === dragStartRef.current.id);
+          if(!draggedVessel) return;
+          let newBow = dragStartRef.current.bowPos - deltaMeters;
+          const loa = draggedVessel.loa || 200;
+          newBow = Math.max(-250, Math.min(850 - loa, Math.round(newBow)));
+          const cabinOffset = dragStartRef.current.cabinOffset; 
+          
+          setVessels(prev => {
+            const newData = prev.map(v => v.id === dragStartRef.current.id ? { ...v, bowPos: newBow, sternPos: newBow + loa, cabinPos: Math.round(newBow + cabinOffset) } : v);
+            dragStartRef.current.lastData = newData; 
+            return newData;
+          });
+      } else if (type === 'qc' && dragStartRef.current.lastQcData) {
+          const qcToMove = dragStartRef.current.lastQcData.find(q => q.id === dragStartRef.current.id);
+          if(!qcToMove) return;
+          let newPos = dragStartRef.current.pos - deltaMeters;
+          
+          let minLimit = Math.max(15, qcToMove.rangeStart);
+          let maxLimit = Math.min(585, qcToMove.rangeEnd);
+
+          const otherQcs = dragStartRef.current.lastQcData.filter(q => q.id !== qcToMove.id);
+          for (const other of otherQcs) {
+              if (other.pos < dragStartRef.current.pos) minLimit = Math.max(minLimit, other.pos + 35); 
+              else if (other.pos > dragStartRef.current.pos) maxLimit = Math.min(maxLimit, other.pos - 35);
+          }
+          newPos = Math.max(minLimit, Math.min(maxLimit, Math.round(newPos))); 
+          
+          setQcTasks(prev => {
+             const newData = prev.map(q => q.id === dragStartRef.current.id ? { ...q, pos: newPos } : q);
+             dragStartRef.current.lastQcData = newData;
+             return newData;
+          });
+      }
+    };
+
+    const handleMouseUp = (e) => {
+      if (isDraggingRef.current) {
+        isDraggingRef.current = false; setIsDragging(false);
+        
+        if (dragStartRef.current.type === 'vessel' && dragStartRef.current.lastData) {
+            if (!dragStartRef.current.hasMoved && isAutoExpand) {
+                setUiState(prev => ({ ...prev, detailsExpanded: true }));
+            }
+            const originalBow = dragStartRef.current.bowPos;
+            const originalTier = dragStartRef.current.lastData.find(v => v.id === dragStartRef.current.id)?.tier || 1;
+            const draggedVessel = dragStartRef.current.lastData.find(v => v.id === dragStartRef.current.id);
+            
+            if(draggedVessel) {
+                const loa = draggedVessel.loa || 200;
+                const cabinOffset = dragStartRef.current.cabinOffset;
+                let finalTier = draggedVessel.tier || 1;
+                let finalBow = draggedVessel.bowPos;
+
+                const checkCollision = (tierToCheck, bowPosToCheck) => {
+                    const sternPosToCheck = bowPosToCheck + loa;
+                    const dummyVessel = { ...draggedVessel, bowPos: bowPosToCheck, sternPos: sternPosToCheck, tier: tierToCheck };
+                    const others = dragStartRef.current.lastData.filter(v => v.id !== draggedVessel.id && (v.tier || 1) === tierToCheck);
+                    
+                    for (const other of others) {
+                        const isOverlapping = (bowPosToCheck < other.sternPos) && (sternPosToCheck > other.bowPos);
+                        const clearance = getClearance(dummyVessel, other, mooringPercent);
+                        const hasClearanceViolation = !(sternPosToCheck <= other.bowPos - clearance || bowPosToCheck >= other.sternPos + clearance);
+
+                        if (isOverlapping) return { collision: true, type: 'overlap', target: other };
+                        else if (hasClearanceViolation) return { collision: true, type: 'clearance', target: other };
+                    }
+                    return { collision: false };
+                };
+
+                // Nếu đang ở tab Mô Phỏng và di chuyển tàu
+                if (activeTab === 'visual') {
+                    if (draggedVessel.type === 'barge') {
+                        // Logic cho Sà Lan (bỏ giới hạn Tier)
+                        let tryTier = 1;
+                        let maxTiers = 5; // Có thể mở rộng lên N lớp
+                        let collisionFound = true;
+                        
+                        while(collisionFound && tryTier <= maxTiers) {
+                            const check = checkCollision(tryTier, finalBow);
+                            if (!check.collision) {
+                                finalTier = tryTier;
+                                collisionFound = false;
+                            } else {
+                                tryTier++;
+                            }
+                        }
+                        // Nếu vẫn va chạm, lùi về gốc
+                        if (collisionFound) {
+                            finalBow = originalBow;
+                            finalTier = originalTier;
+                        }
+                    } else {
+                        // Logic cho Tàu lớn
+                        const currentCheck = checkCollision(finalTier, finalBow);
+                        if (currentCheck.collision) {
+                            finalBow = originalBow;
+                        }
+                    }
+                }
+
+                setVessels(prev => {
+                    const updated = prev.map(v => v.id === dragStartRef.current.id ? { 
+                        ...v, bowPos: finalBow, sternPos: finalBow + loa, cabinPos: Math.round(finalBow + cabinOffset), tier: finalTier 
+                    } : v);
+                    dragStartRef.current.lastData = updated;
+                    syncToCloud(updated, qcTasks);
+                    return updated;
+                });
+            }
+        }
+        if (dragStartRef.current.type === 'qc' && dragStartRef.current.lastQcData) syncToCloud(vessels, dragStartRef.current.lastQcData);
+      }
+    };
+
+    if (isDragging && !isPrintMode) { window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp); }
+    return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
+  }, [isDragging, zoomLevel, panOffset, isPrintMode, isAutoExpand, activeTab]);
+
+  const handleNudgeStart = (e, id, direction) => {
+      e.preventDefault(); e.stopPropagation();
+      const doNudge = () => {
+          setVessels(prev => {
+              const v = prev.find(x => x.id === id);
+              if(!v) return prev;
+              const newBow = v.bowPos + direction;
+              const constrainedBow = Math.max(-250, Math.min(850 - (v.loa || 200), newBow));
+              const newStern = constrainedBow + (v.loa || 200);
+
+              let isColliding = false;
+              const others = prev.filter(x => x.id !== id && (x.tier || 1) === (v.tier || 1));
+              const dummyVessel = { ...v, bowPos: constrainedBow, sternPos: newStern };
+              
+              for (const other of others) {
+                  const clearance = getClearance(dummyVessel, other, mooringPercent);
+                  if (!(newStern <= other.bowPos - clearance || constrainedBow >= other.sternPos + clearance)) {
+                      isColliding = true; break;
+                  }
+              }
+              if (isColliding) return prev; 
+              const updated = prev.map(x => x.id === id ? {
+                  ...x, bowPos: constrainedBow, sternPos: newStern, cabinPos: Math.round(constrainedBow + (x.cabinPos - x.bowPos))
+              } : x);
+              dragStartRef.current.lastData = updated;
+              return updated;
+          });
+      };
+      doNudge(); nudgeIntervalRef.current = setInterval(doNudge, 80); 
+  };
+
+  const handleNudgeStop = (e) => {
+      if(e) { e.preventDefault(); e.stopPropagation(); }
+      if (nudgeIntervalRef.current) {
+          clearInterval(nudgeIntervalRef.current);
+          nudgeIntervalRef.current = null;
+          if (dragStartRef.current.lastData) syncToCloud(dragStartRef.current.lastData, qcTasks);
+      }
+  };
+
+  useEffect(() => { return () => { if (nudgeIntervalRef.current) clearInterval(nudgeIntervalRef.current); }; }, []);
+
+  const selectedQcCount = qcTasks.filter(q => q.selected).length;
+  const safeMasterVessels = Array.isArray(masterVessels) ? masterVessels : [];
+  const filteredVessels = safeMasterVessels.filter(v => String(v.name || '').toUpperCase().includes(String(searchQuery || '').toUpperCase()));
+
+  // -------------------------------------------------------------
+  // RENDER: VISUAL MAP (MÔ PHỎNG BẾN 2D)
+  // -------------------------------------------------------------
+  const renderVesselMap = () => {
+    return (
+      <div id="vessel-map-export" className={`relative flex flex-col select-none overflow-hidden ${isPrintMode ? 'bg-white rounded-none border-none shadow-none w-[1200px] h-[700px] flex-shrink-0' : 'w-full h-full bg-slate-100 rounded-[32px] border border-slate-200 shadow-inner'}`}>
+        {isPrintMode && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] text-center w-full bg-white pb-2 border-b-2 border-black">
+                <h1 className="text-xl font-black uppercase text-black tracking-widest">Sơ đồ Kế hoạch Bến CMIT</h1>
+                <p className="text-[10px] font-bold text-black mt-1">Ngày In: {new Date().toLocaleString('vi-VN')}</p>
+            </div>
+        )}
+
+        {isSetupMode && !isPrintMode && (
+            <div className="absolute top-20 right-4 z-[90] bg-white/95 backdrop-blur-xl rounded-2xl border-2 border-red-500 shadow-[0_20px_50px_rgba(220,38,38,0.3)] p-5 w-[340px] max-h-[80vh] overflow-y-auto custom-scrollbar pointer-events-auto">
+                <div className="sticky top-0 bg-white/90 pb-3 mb-3 border-b border-red-100 z-10">
+                    <h3 className="text-sm font-black text-red-600 flex items-center gap-2 uppercase tracking-widest"><Settings2 size={16} /> SETUP CẦU BẾN (ADMIN)</h3>
+                    <p className="text-[10px] text-slate-500 font-bold mt-1 leading-relaxed">Đường kẻ màu tượng trưng cho giới hạn di chuyển của các Cẩu QC.</p>
+                </div>
+                <div className="flex flex-col gap-4">
+                    {qcTasks.map((qc, index) => (
+                        <div key={`setup-qc-${qc.id}`} className="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-1 h-full" style={{backgroundColor: qc.color}}></div>
+                            <div className="flex justify-between items-center mb-4 pl-2">
+                                <span className="text-xs font-black text-slate-800 uppercase tracking-widest">{qc.name}</span>
+                                <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded shadow-inner">{qc.rangeStart}m ↔ {qc.rangeEnd}m</span>
+                            </div>
+                            <div className="flex flex-col gap-3 pl-2">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[9px] font-black w-8 text-slate-400">MIN:</span>
+                                    <input type="range" min="15" max={qc.rangeEnd - 10} value={qc.rangeStart}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            const newQcs = [...qcTasks];
+                                            newQcs[index].rangeStart = val;
+                                            if (newQcs[index].pos < val) newQcs[index].pos = val;
+                                            setQcTasks(newQcs);
+                                        }}
+                                        className="flex-1 accent-blue-500 cursor-pointer h-1.5 bg-slate-200 rounded-lg appearance-none" />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-[9px] font-black w-8 text-slate-400">MAX:</span>
+                                    <input type="range" min={qc.rangeStart + 10} max="585" value={qc.rangeEnd}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value);
+                                            const newQcs = [...qcTasks];
+                                            newQcs[index].rangeEnd = val;
+                                            if (newQcs[index].pos > val) newQcs[index].pos = val;
+                                            setQcTasks(newQcs);
+                                        }}
+                                        className="flex-1 accent-blue-500 cursor-pointer h-1.5 bg-slate-200 rounded-lg appearance-none" />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex gap-2 mt-5">
+                    <button onClick={() => setIsSetupMode(false)} className="flex-1 py-3 bg-slate-100 text-slate-600 font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-slate-200 transition-colors shadow-sm">HỦY / ĐÓNG</button>
+                    <button onClick={saveSetupConfig} className="flex-1 py-3 bg-emerald-500 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-emerald-600 transition-colors shadow-lg flex items-center justify-center gap-2"><Save size={14}/> LƯU CÀI ĐẶT</button>
+                </div>
+            </div>
+        )}
+
+        {!isPrintMode && (
+            <div className="absolute top-4 left-4 z-50 flex gap-4 pointer-events-none w-[calc(100%-2rem)] justify-between items-start">
+                 <div className="flex gap-4 items-start">
+                     
+                     {/* BẢNG 1: ĐỘI TÀU */}
+                     <div className="bg-white/95 backdrop-blur-xl rounded-2xl border border-white/50 shadow-2xl pointer-events-auto flex flex-col shadow-blue-900/10 transition-all duration-300 relative z-50">
+                        <div className={`flex justify-between items-center p-3 cursor-pointer bg-slate-50/50 hover:bg-slate-100/50 group ${uiState.listExpanded ? 'rounded-t-2xl' : 'rounded-2xl'}`} onClick={() => toggleUi('listExpanded')}>
+                            <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-600 flex items-center gap-2">
+                                <Ship size={14}/> Đội Phương Tiện ({vessels.length})
+                            </h3>
+                            <div className="w-6 h-6 rounded-md flex items-center justify-center group-hover:bg-slate-200 transition-colors ml-4 text-slate-400">
+                                {uiState.listExpanded ? <ChevronsUp size={14} /> : <ChevronsDown size={14} />}
+                            </div>
+                        </div>
+                        {uiState.listExpanded && (
+                            <div className="p-2 border-t border-slate-100 flex flex-col gap-2 w-[250px]">
+                                <div className="max-h-[200px] overflow-y-auto custom-scrollbar flex flex-col gap-1.5 pr-1">
+                                    {vessels.map((v, idx) => {
+                                        const { color } = getVesselStyles(v);
+                                        const isActive = activeVesselId === v.id;
+                                        return (
+                                            <div key={`sidebar-vessel-${v.id || idx}`} className="flex gap-1 group">
+                                                <button onClick={() => setActiveVesselId(v.id)} className={`flex-1 text-left px-2 py-2 rounded-xl transition-all border flex items-center justify-between ${isActive ? 'bg-[#002D54] text-white border-transparent shadow-lg' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-blue-50'}`}>
+                                                    <div className="flex items-center gap-2 overflow-hidden w-full">
+                                                        <div className="relative w-4 h-4 flex-shrink-0 cursor-pointer hover:scale-125 transition-transform" title="Bấm để đổi màu tàu">
+                                                            <div className={`absolute inset-0 shadow-inner ${v.type==='barge' ? 'rounded-sm' : 'rounded-full'}`} style={{ backgroundColor: color, pointerEvents: 'none' }}></div>
+                                                            <input type="color" value={color} onChange={(e) => { const newVessels = vessels.map(ves => ves.id === v.id ? { ...ves, color: e.target.value } : ves); setVessels(newVessels); syncToCloud(newVessels); }} onClick={(e) => e.stopPropagation()} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                                                        </div>
+                                                        <span className="text-xs font-black truncate uppercase">{String(v.name || 'UNKNOWN')}</span>
+                                                    </div>
+                                                </button>
+                                                {vessels.length > 1 && isActive && (
+                                                    <button onClick={() => removeVessel(v.id)} className="px-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-50 hover:text-white transition-colors"><Trash2 size={14} /></button>
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                <div className="mt-1 flex gap-1 relative">
+                                    <button onClick={addNewVessel} className="flex-1 bg-blue-100 hover:bg-blue-200 text-blue-700 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-colors flex items-center justify-center gap-1"><Ship size={12} /> + TÀU</button>
+                                    <button onClick={() => setShowBargeMenu(!showBargeMenu)} className="flex-1 bg-amber-100 hover:bg-amber-200 text-amber-700 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-colors flex items-center justify-center gap-1"><Layers size={12} /> + SÀ LAN</button>
+                                    {showBargeMenu && (
+                                        <div className="absolute top-full right-0 mt-2 w-full bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden z-50">
+                                            {BARGE_PRESETS.map((preset, idx) => (
+                                                <button key={`barge-preset-${idx}`} onClick={() => addBarge(preset)} className="w-full text-left px-4 py-2 hover:bg-amber-50 text-[10px] font-black text-slate-700 flex justify-between border-b last:border-0">
+                                                    <span className="uppercase">{String(preset.bays)}</span><span className="text-amber-600">{Number(preset.loa)}m</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                     </div>
+
+                     {/* BẢNG 2: CHI TIẾT TÀU */}
+                     {activeVessel && (
+                         <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-white/50 shadow-2xl pointer-events-auto shadow-blue-900/10 flex flex-col transition-all duration-300 overflow-hidden uppercase">
+                            <div className="flex items-center justify-between p-4 cursor-pointer bg-slate-50/50 hover:bg-slate-100/50 group" onClick={() => toggleUi('detailsExpanded')}>
+                                 <div className="flex items-center gap-2">
+                                     <div className={`w-3 h-3 shadow-inner animate-pulse ${activeVessel.type === 'barge' ? 'rounded-sm' : 'rounded-full'}`} style={{ backgroundColor: getVesselStyles(activeVessel).color }}></div>
+                                     <h3 className="text-[10px] font-black tracking-[0.2em] text-slate-600">{activeVessel.type === 'barge' ? 'TỌA ĐỘ SÀ LAN' : 'TỌA ĐỘ TÀU'}</h3>
+                                 </div>
+                                 <div className="w-6 h-6 rounded-md flex items-center justify-center group-hover:bg-slate-200 transition-colors ml-6 text-slate-400">
+                                    {uiState.detailsExpanded ? <ChevronsUp size={14} /> : <ChevronsDown size={14} />}
+                                 </div>
+                            </div>
+                            {uiState.detailsExpanded && (
+                                <div className="p-4 pt-2 w-64 space-y-3 border-t border-slate-100">
+                                    <SmallInputField label="Mũi (Bow m)" type="number" value={activeVessel.bowPos} onChange={(v) => {
+                                        const parsed = v === '' ? '' : Math.round(v);
+                                        if (parsed === '') { updateActiveVessel({ bowPos: '', sternPos: '' }); } 
+                                        else {
+                                            const cabinOffset = (activeVessel.cabinPos || 0) - (activeVessel.bowPos || 0);
+                                            updateActiveVessel({ bowPos: parsed, sternPos: parsed + (activeVessel.loa || 0), cabinPos: parsed + cabinOffset });
+                                        }
+                                    }} />
+                                    <SmallInputField label="Lái (Stern m)" type="number" value={activeVessel.sternPos} onChange={(v) => {
+                                        const parsed = v === '' ? '' : Math.round(v);
+                                        if (parsed === '') { updateActiveVessel({ bowPos: '', sternPos: '' }); } 
+                                        else {
+                                            const newBow = parsed - (activeVessel.loa || 0);
+                                            const cabinOffset = (activeVessel.cabinPos || 0) - (activeVessel.bowPos || 0);
+                                            updateActiveVessel({ sternPos: parsed, bowPos: newBow, cabinPos: newBow + cabinOffset });
+                                        }
+                                    }} />
+                                    
+                                    {activeVessel.type === 'barge' && (
+                                        <div className="flex gap-2 items-center bg-slate-50 p-1.5 rounded-lg border border-slate-200 justify-between">
+                                            <span className="text-[9px] font-black text-slate-400 tracking-widest ml-1">LỚP CẬP (TIER):</span>
+                                            <div className="flex items-center gap-1">
+                                                <button onClick={() => updateActiveVessel({ tier: Math.max(1, (activeVessel.tier || 1) - 1) })} className="w-6 h-6 bg-slate-200 text-slate-600 rounded flex items-center justify-center hover:bg-slate-300"><Minus size={12}/></button>
+                                                <div className="w-8 text-center text-xs font-black text-[#002D54]">{activeVessel.tier || 1}</div>
+                                                <button onClick={() => updateActiveVessel({ tier: (activeVessel.tier || 1) + 1 })} className="w-6 h-6 bg-slate-200 text-slate-600 rounded flex items-center justify-center hover:bg-slate-300"><Plus size={12}/></button>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeVessel.type === 'vessel' && (
+                                        <div className="flex gap-2 items-center bg-blue-50 p-1.5 rounded-lg border border-blue-200">
+                                            <span className="text-[9px] font-black text-blue-600 tracking-widest ml-1 uppercase whitespace-nowrap">NEO MŨI/LÁI:</span>
+                                            <input type="number" value={mooringPercent} onChange={(e) => { const v = e.target.value === '' ? 0 : Number(e.target.value); setMooringPercent(v); syncToCloud(null, null, v); }} className="w-10 text-center font-black outline-none text-[10px] bg-white border border-blue-300 rounded shadow-sm text-blue-800" />
+                                            <span className="text-[9px] font-black text-blue-600">% =</span>
+                                            <span className="flex-1 text-center font-black text-[11px] text-blue-900 shadow-sm bg-white rounded py-0.5">{getMooringSpace(activeVessel, mooringPercent)}m</span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-2 items-center bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+                                        <span className="text-[9px] font-black text-slate-400 tracking-widest ml-1">MẠN CẬP:</span>
+                                        <button onClick={() => {
+                                            if (activeVessel.side === 'PS') {
+                                                const distFromBow = activeVessel.bowToCabin || ((Number(activeVessel.sternPos)||0) - (Number(activeVessel.cabinPos)||0));
+                                                updateActiveVessel({ side: 'SB', cabinPos: Math.round((Number(activeVessel.bowPos)||0) + distFromBow) });
+                                            }
+                                        }} className={`flex-1 py-1 rounded font-black text-[9px] transition-colors ${(!activeVessel.side || activeVessel.side === 'SB') ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>SB (PHẢI)</button>
+                                        <button onClick={() => {
+                                            if (!activeVessel.side || activeVessel.side === 'SB') {
+                                                const distFromBow = activeVessel.bowToCabin || ((Number(activeVessel.cabinPos)||0) - (Number(activeVessel.bowPos)||0));
+                                                updateActiveVessel({ side: 'PS', cabinPos: Math.round((Number(activeVessel.sternPos)||0) - distFromBow) });
+                                            }
+                                        }} className={`flex-1 py-1 rounded font-black text-[9px] transition-colors ${activeVessel.side === 'PS' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-200 text-slate-500'}`}>PS (TRÁI)</button>
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <SmallInputField label="LOA" type="number" value={activeVessel.loa} onChange={(v) => {
+                                            const parsed = v === '' ? '' : Math.round(v);
+                                            updateActiveVessel({ loa: parsed, sternPos: parsed === '' ? activeVessel.sternPos : Math.round((Number(activeVessel.bowPos)||0) + parsed)})
+                                        }} />
+                                        {activeVessel.type !== 'barge' && (
+                                            <SmallInputField label="CABIN" type="number" value={activeVessel.cabinPos} onChange={(v) => {
+                                                const parsed = v === '' ? '' : Math.round(v);
+                                                updateActiveVessel({ cabinPos: parsed })
+                                            }} />
+                                        )}
+                                    </div>
+
+                                    <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                                        <SmallInputField label="Cập dự kiến (ETA)" type="datetime-local" value={activeVessel.eta || ''} onChange={(v) => {
+                                            updateActiveVessel({ eta: v });
+                                        }} />
+                                        <SmallInputField label="Rời dự kiến (ETD)" type="datetime-local" value={activeVessel.etd || ''} onChange={(v) => {
+                                            updateActiveVessel({ etd: v });
+                                        }} />
+                                    </div>
+                                </div>
+                            )}
+                         </div>
+                     )}
+                 </div>
+
+                 {/* BẢNG 3: BẢNG CẨU BỜ */}
+                 <div className={`transition-all duration-300 transform origin-top-right ${selectedQcCount > 0 ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none'}`}>
+                     <div className="bg-slate-900/95 backdrop-blur-xl rounded-3xl border border-slate-700 shadow-[0_15px_40px_rgba(0,0,0,0.6)] flex flex-col transition-all duration-300 overflow-hidden min-w-[280px]">
+                         <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-800/50 group border-b border-slate-700" onClick={() => toggleUi('qcExpanded')}>
+                             <div className="flex items-center gap-2">
+                                <Crosshair size={14} className="text-sky-400" />
+                                <h3 className="text-[10px] font-black tracking-[0.2em] text-white">Bảng Điều Khiển Cẩu Bờ</h3>
+                             </div>
+                             <div className="flex items-center gap-3">
+                                 <span className="bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full">{Number(selectedQcCount)} Đang chọn</span>
+                                 <div className="text-slate-400 group-hover:text-white transition-colors">
+                                     {uiState.qcExpanded ? <ChevronsUp size={14} /> : <ChevronsDown size={14} />}
+                                 </div>
+                             </div>
+                         </div>
+                         {uiState.qcExpanded && (
+                             <div className="p-4 flex flex-col gap-3">
+                                 <div className="flex gap-2">
+                                     <button onClick={() => setBoomState(true, false)} className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-colors flex flex-col justify-center items-center gap-1 border border-slate-600"><ChevronsDown size={14}/><span>Làm Hàng</span></button>
+                                     <button onClick={handleSafeBoomClick} className="flex-1 bg-red-600 hover:bg-red-50 text-white py-2 rounded-xl text-[10px] font-black tracking-widest uppercase transition-colors flex flex-col justify-center items-center gap-1 shadow-lg shadow-red-900/50"><ChevronsUp size={14}/><span>An Toàn</span></button>
+                                 </div>
+                                 <div className="pt-2 border-t border-slate-700/50">
+                                     <p className="text-[9px] font-bold text-slate-400 tracking-widest mb-2 italic">Tập trung Cẩu về mục tiêu:</p>
+                                     <div className="flex flex-col gap-1.5 max-h-[120px] overflow-y-auto custom-scrollbar">
+                                         {vessels.map((v, idx) => (
+                                             <button key={`qc-target-${v.id || idx}`} onClick={() => autoGatherCranesForVessel(v.id)} className="w-full text-left bg-blue-900/40 hover:bg-blue-600 text-blue-100 py-1.5 px-3 rounded-lg text-[10px] font-black tracking-widest transition-colors flex justify-between items-center group border border-blue-500/20 uppercase">
+                                                 <span className="truncate pr-2">{String(v.name || 'UNKNOWN')}</span><ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                             </button>
+                                         ))}
+                                     </div>
+                                 </div>
+                             </div>
+                         )}
+                     </div>
+                 </div>
+            </div>
+        )}
+
+        {!isPrintMode && (
+            <>
+                <div className="absolute bottom-6 right-6 z-50 flex bg-white/95 backdrop-blur-sm p-1.5 rounded-xl shadow-2xl border border-slate-200 pointer-events-auto items-center">
+                    <button onClick={() => setZoomLevel(prev => Math.max(prev - 0.25, 0.5))} className="p-2 hover:bg-slate-100 rounded-lg text-slate-700 active:scale-95 transition-all"><ZoomOut size={18}/></button>
+                    <div className="w-12 text-[10px] font-black text-center text-slate-800">{Math.round(zoomLevel * 100)}%</div>
+                    <button onClick={() => setZoomLevel(prev => Math.min(prev + 0.25, 3))} className="p-2 hover:bg-slate-100 rounded-lg text-slate-700 active:scale-95 transition-all"><ZoomIn size={18}/></button>
+                    <div className="w-[1px] h-6 bg-slate-300 mx-1"></div>
+                    <button onClick={handleAutoCenter} className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg active:scale-95 transition-all" title="Tự động cân tâm"><Focus size={18}/></button>
+                </div>
+                
+                <div className="absolute bottom-6 left-6 z-50 flex gap-3 pointer-events-none flex-col sm:flex-row">
+                    <div className="bg-white/90 px-4 py-2.5 rounded-xl border border-slate-200 shadow-lg flex items-center gap-2">
+                        <p className="text-[10px] font-black text-slate-500 flex items-center gap-2"><Hand size={14}/> Kéo chuột vào nền để di chuyển bản đồ</p>
+                    </div>
+                    <button onClick={() => setIsAutoExpand(!isAutoExpand)} className={`px-4 py-2.5 rounded-xl border shadow-lg transition-all text-[10px] font-black flex items-center gap-2 pointer-events-auto active:scale-95 ${isAutoExpand ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600'}`}>
+                        {isAutoExpand ? <Eye size={14}/> : <EyeOff size={14}/>} {isAutoExpand ? 'AUTO-BẬT BẢNG: ON' : 'AUTO-BẬT BẢNG: OFF'}
+                    </button>
+                    <button onClick={() => setShowGuideLines(!showGuideLines)} className={`px-4 py-2.5 rounded-xl border shadow-lg transition-all text-[10px] font-black flex items-center gap-2 pointer-events-auto active:scale-95 ${showGuideLines ? 'bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100' : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-slate-100 hover:text-slate-600'}`}>
+                        {showGuideLines ? <Eye size={14}/> : <EyeOff size={14}/>} {showGuideLines ? 'HIỆN TỌA ĐỘ MŨI/LÁI: ON' : 'HIỆN TỌA ĐỘ MŨI/LÁI: OFF'}
+                    </button>
+                </div>
+            </>
+        )}
+
+        <div ref={mapContainerRef} onMouseDown={(e) => handleMouseDown(e, 'map')} className={`w-full h-full overflow-hidden ${isPrintMode ? 'bg-white' : 'bg-blue-900/5'} ${isDraggingRef.current && dragStartRef.current.type === 'map' && !isPrintMode ? 'cursor-grabbing' : (isPrintMode ? '' : 'cursor-grab')}`}>
+            <div ref={innerMapRef} className="w-full h-full flex flex-col relative transition-transform duration-100 ease-linear" style={{ transformOrigin: '50% 85%', transform: isPrintMode ? 'scale(1) translate(0,0)' : `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})` }}>
+                
+                {/* GLOBAL GUIDE LINES */}
+                {vessels.map((vessel, index) => {
+                    if(!vessel) return null;
+                    const isBarge = vessel.type === 'barge';
+                    const shouldShowGuides = isPrintMode ? (isBarge ? pdfConfig.showBargeLabels : pdfConfig.showVesselLabels) : showGuideLines;
+                    if (!shouldShowGuides) return null;
+
+                    const bowRightPercent = ((bufferLength + (vessel.bowPos||0)) / totalVisLength) * 100;
+                    const sternRightPercent = ((bufferLength + (vessel.sternPos||0)) / totalVisLength) * 100;
+                    const cabinRightPercent = ((bufferLength + (vessel.cabinPos||0)) / totalVisLength) * 100;
+                    const { color } = getVesselStyles(vessel);
+                    const isPS = vessel.side === 'PS';
+                    const rightLabel = isPS ? 'LÁI' : 'MŨI';
+                    const leftLabel = isPS ? 'MŨI' : 'LÁI';
+                    const FIXED_BARGE_WIDTH = 18.5; 
+                    const vesselHeightCqi = isBarge ? (FIXED_BARGE_WIDTH / totalVisLength) * 100 : ((vessel.loa || 200) / totalVisLength) * 100 / 7.5;
+                    const yOffset = index * 26; 
+                    const labelBottom = `calc(140px + ${Math.max(30, vesselHeightCqi*10)}px + 12px + ${yOffset}px)`;
+
+                    return (
+                        <div key={`guides-${vessel.id || index}`} className={`absolute top-0 left-0 w-full h-full pointer-events-none z-[60] ${isPrintMode ? 'opacity-100' : 'opacity-80'}`}>
+                            <div className="absolute top-0 h-full w-[1px] border-r border-dashed" style={{ right: `${bowRightPercent}%`, borderColor: isPrintMode ? '#000' : color }}>
+                                <div className={`absolute right-0 translate-x-1/2 text-[9px] font-black px-1.5 py-0.5 rounded whitespace-nowrap uppercase ${isPrintMode ? 'text-black bg-white border border-black shadow-none' : 'text-white shadow-md border border-white/40'}`} style={{ bottom: labelBottom, backgroundColor: isPrintMode ? 'white' : color }}>{String(rightLabel)} {Math.round(vessel.bowPos||0)}m</div>
+                            </div>
+                            <div className="absolute top-0 h-full w-[1px] border-r border-dashed" style={{ right: `${sternRightPercent}%`, borderColor: isPrintMode ? '#000' : color }}>
+                                <div className={`absolute right-0 translate-x-1/2 text-[9px] font-black px-1.5 py-0.5 rounded whitespace-nowrap uppercase ${isPrintMode ? 'text-black bg-white border border-black shadow-none' : 'text-white shadow-md border border-white/40'}`} style={{ bottom: labelBottom, backgroundColor: isPrintMode ? 'white' : color }}>{String(leftLabel)} {Math.round(vessel.sternPos||0)}m</div>
+                            </div>
+                            {vessel.type !== 'barge' && (
+                                <div className={`absolute top-0 h-full w-[1px] border-r border-dashed ${isPrintMode ? 'opacity-100' : 'opacity-50'}`} style={{ right: `${cabinRightPercent}%`, borderColor: isPrintMode ? '#000' : color }}>
+                                    <div className={`absolute right-0 translate-x-1/2 text-[8px] font-black px-1.5 py-0.5 rounded whitespace-nowrap uppercase ${isPrintMode ? 'text-black bg-white border border-black shadow-none' : 'text-white shadow-md border border-white/40'}`} style={{ bottom: `calc(${labelBottom} + 22px)`, backgroundColor: isPrintMode ? 'white' : color }}>CAB {Math.round(vessel.cabinPos||0)}m</div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+
+                {/* SEA ZONE */}
+                <div style={{ containerType: 'inline-size' }} className={`relative w-full flex-1 flex items-end overflow-hidden z-10 ${isPrintMode ? 'bg-white border-t-2 border-black' : 'bg-gradient-to-t from-blue-400/20 to-blue-600/10 border-b border-blue-200/40'}`}>
+                  {!isPrintMode && <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'linear-gradient(rgba(3, 105, 161, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(3, 105, 161, 0.3) 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>}
+                  
+                  {/* MOORING LINES */}
+                  {(!isPrintMode || pdfConfig.showMooringLines) && (
+                      <svg xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }} className="absolute inset-0 pointer-events-none z-20 overflow-visible">
+                          {vessels.filter(v => v?.type === 'vessel').map((vessel, index) => {
+                              const { rightBollard, leftBollard } = getMooringBollards(vessel, mooringPercent);
+                              const rightBollardX = 100 - ((bufferLength + Number(rightBollard.pos || 0)) / totalVisLength) * 100;
+                              const rightShipX = 100 - ((bufferLength + Number(vessel.bowPos || 0)) / totalVisLength) * 100;
+                              const leftBollardX = 100 - ((bufferLength + Number(leftBollard.pos || 0)) / totalVisLength) * 100;
+                              const leftShipX = 100 - ((bufferLength + Number(vessel.sternPos || 0)) / totalVisLength) * 100;
+
+                              const W = vessel.loa || 200;
+                              const H = vessel.type === 'barge' ? 18.5 : W / 7.5;
+                              const halfHeightCqi = (H / 2 / totalVisLength) * 100;
+                              const fullHeightCqi = (H / totalVisLength) * 100;
+                              
+                              let shipMidY;
+                              if ((vessel.tier || 1) > 1) {
+                                  shipMidY = `calc(100% - ${(vessel.tier - 1) * fullHeightCqi}cqi - ${(vessel.tier - 1) * 4}px - ${halfHeightCqi}cqi)`;
+                              } else {
+                                  shipMidY = `calc(100% - ${halfHeightCqi}cqi)`;
+                              }
+
+                              const lineColor = isPrintMode ? '#000' : '#EF4444';
+                              const strokeW = isPrintMode ? "1.5" : "2";
+
+                              return (
+                                  <g key={`mooring-line-${vessel.id || index}`}>
+                                      <line x1={`${rightBollardX}%`} y1="100%" x2={`${rightShipX}%`} y2={shipMidY} style={{ y2: shipMidY }} stroke={lineColor} strokeWidth={strokeW} className={isPrintMode ? '' : 'drop-shadow-sm opacity-90'} />
+                                      {!isPrintMode && <circle cx={`${rightBollardX}%`} cy="100%" r="4" fill={lineColor} className="drop-shadow-sm" />}
+                                      {!isPrintMode && <circle cx={`${rightShipX}%`} cy={shipMidY} style={{ cy: shipMidY }} r="3" fill={lineColor} />}
+                                      
+                                      <line x1={`${leftBollardX}%`} y1="100%" x2={`${leftShipX}%`} y2={shipMidY} style={{ y2: shipMidY }} stroke={lineColor} strokeWidth={strokeW} className={isPrintMode ? '' : 'drop-shadow-sm opacity-90'} />
+                                      {!isPrintMode && <circle cx={`${leftBollardX}%`} cy="100%" r="4" fill={lineColor} className="drop-shadow-sm" />}
+                                      {!isPrintMode && <circle cx={`${leftShipX}%`} cy={shipMidY} style={{ cy: shipMidY }} r="3" fill={lineColor} />}
+                                  </g>
+                              );
+                          })}
+                      </svg>
+                  )}
+
+                  {/* RENDER VESSELS & BARGES */}
+                  {vessels.map((vessel, index) => {
+                      if(!vessel) return null;
+                      const isBarge = vessel.type === 'barge';
+                      const shipWidthPercent = ((vessel.loa||200) / totalVisLength) * 100;
+                      const rightPosPercent = ((bufferLength + (vessel.bowPos||0)) / totalVisLength) * 100;
+                      
+                      const mooringLen = getMooringSpace(vessel, mooringPercent);
+                      const mooringWidthPercent = (mooringLen / totalVisLength) * 100;
+                      const rightMooringPosPercent = ((bufferLength + (vessel.bowPos||0) - mooringLen) / totalVisLength) * 100;
+                      const leftMooringPosPercent = ((bufferLength + (vessel.sternPos||0)) / totalVisLength) * 100;
+
+                      const { color } = getVesselStyles(vessel);
+                      const isThisActive = vessel.id === activeVesselId;
+                      const isDraggingThis = isDragging && isThisActive && dragStartRef.current.type === 'vessel';
+                      const isPS = vessel.side === 'PS';
+                      
+                      const shapeClipPath = isBarge
+                        ? 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)'
+                        : (isPS ? 'polygon(6% 0%, 100% 0%, 100% 100%, 6% 100%, 0% 50%)' : 'polygon(0% 0%, 94% 0%, 100% 50%, 94% 100%, 0% 100%)');
+                      
+                      const FIXED_BARGE_WIDTH = 18.5; 
+                      const aspectRatio = isBarge ? `${vessel.loa || 50} / ${FIXED_BARGE_WIDTH}` : '7.5 / 1'; 
+                      
+                      // Hỗ trợ Unlimited Tiers (Không giới hạn lớp cập mạn)
+                      const vesselTier = vessel.tier || 1;
+                      const doubleBerthingOffset = vesselTier > 1 ? `translateY(calc(-${(vesselTier - 1) * 100}% - ${(vesselTier - 1) * 4}px))` : 'translateY(0)';
+
+                      const W = vessel.loa || 200;
+                      const H = isBarge ? FIXED_BARGE_WIDTH : W / 7.5;
+                      let polyPoints = "";
+                      if (isBarge) polyPoints = `0,0 ${W},0 ${W},${H} 0,${H}`;
+                      else {
+                          if (isPS) polyPoints = `${W * 0.06},0 ${W},0 ${W},${H} ${W * 0.06},${H} 0,${H / 2}`;
+                          else polyPoints = `0,0 ${W * 0.94},0 ${W},${H / 2} ${W * 0.94},${H} 0,${H}`;
+                      }
+
+                      let displayName = String(vessel.name || 'UNKNOWN');
+                      let textColClass = "flex-col items-center justify-center text-center";
+                      let textWidthClass = "w-[90%]";
+                      let fontSize = '9px';
+                      
+                      if (isBarge) {
+                          displayName = displayName.replace(/\s*BAYS?/i, 'B').trim();
+                          textColClass = "flex-col items-end justify-center pr-1 text-right";
+                          textWidthClass = "w-full";
+                          if (isPrintMode) fontSize = '5px'; 
+                      }
+
+                      return (
+                          <div key={`vessel-group-${vessel.id || index}`} className="absolute bottom-0 pointer-events-none" style={{ right: 0, width: '100%', height: '100%' }}>
+                              {vessel.type === 'vessel' && !isPrintMode && (
+                                  <>
+                                      <div className="absolute bottom-0 border-x border-t border-dashed rounded-t-sm z-10 flex items-center justify-center overflow-hidden transition-all opacity-60"
+                                           style={{ right: `${rightMooringPosPercent}%`, width: `${mooringWidthPercent}%`, aspectRatio: aspectRatio, borderColor: color, backgroundColor: `${color}1A` }}>
+                                           <span className="text-[5px] font-black tracking-widest drop-shadow-md whitespace-nowrap uppercase" style={{color: color}}>NEO {Number(mooringLen)}M</span>
+                                      </div>
+                                      <div className="absolute bottom-0 border-x border-t border-dashed rounded-t-sm z-10 flex items-center justify-center overflow-hidden transition-all opacity-60"
+                                           style={{ right: `${leftMooringPosPercent}%`, width: `${mooringWidthPercent}%`, aspectRatio: aspectRatio, borderColor: color, backgroundColor: `${color}1A` }}>
+                                           <span className="text-[5px] font-black tracking-widest drop-shadow-md whitespace-nowrap uppercase" style={{color: color}}>NEO {Number(mooringLen)}M</span>
+                                      </div>
+                                  </>
+                              )}
+
+                              <div 
+                                onMouseDown={(e) => handleMouseDown(e, 'vessel', vessel.id)}
+                                className={`absolute bottom-0 flex flex-col justify-center transition-shadow duration-75 pointer-events-auto
+                                    ${isDraggingThis && !isPrintMode ? 'shadow-[0_-15px_30px_rgba(0,100,255,0.4)] ring-2 ring-blue-400 cursor-grabbing z-40 scale-[1.01]' : isThisActive && !isPrintMode ? 'hover:brightness-110 cursor-grab z-30 shadow-[0_-5px_15px_rgba(0,0,0,0.3)]' : `cursor-pointer z-20 ${isPrintMode ? '' : 'opacity-90 shadow-lg hover:opacity-100 hover:z-25'}`}`}
+                                style={{ 
+                                    right: `${rightPosPercent}%`, width: `${shipWidthPercent}%`, aspectRatio: aspectRatio, 
+                                    borderRadius: isBarge ? '4px' : '4px 0 0 4px',
+                                    transform: doubleBerthingOffset
+                                }}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full pointer-events-none">
+                                    {isPrintMode ? <polygon points={polyPoints} fill="#ffffff" stroke="#000000" strokeWidth={Math.max(0.5, W / 200)} strokeLinejoin="round" /> : <polygon points={polyPoints} fill={color} />}
+                                </svg>
+
+                                {!isPrintMode && <div className="absolute inset-0 pointer-events-none opacity-50" style={{ clipPath: shapeClipPath, background: 'linear-gradient(180deg, rgba(255,255,255,0.4) 0%, rgba(0,0,0,0.4) 100%)' }}></div>}
+                                
+                                {vessel.type === 'vessel' && (
+                                    <div className={`absolute top-[8%] h-[84%] rounded-[2px] flex flex-col justify-evenly py-[1px] px-[2px] z-20 transition-all pointer-events-none ${isPrintMode ? 'bg-white border-[1px] border-black shadow-none' : 'bg-[#f8fafc] border border-slate-500 shadow-sm'}`}
+                                         style={{ right: `${(Math.abs((vessel.cabinPos || 0) - (vessel.bowPos || 0)) / (vessel.loa || 200)) * 100}%`, width: `${(18 / (vessel.loa || 200)) * 100}%`, transform: 'translateX(50%)' }}>
+                                        <div className={`w-full h-[15%] rounded-[1px] ${isPrintMode ? 'border border-black bg-white' : 'bg-slate-800/80'}`}></div>
+                                        <div className={`w-full h-[15%] rounded-[1px] ${isPrintMode ? 'border border-black bg-white' : 'bg-slate-800/80'}`}></div>
+                                        <div className={`w-full h-[15%] rounded-[1px] ${isPrintMode ? 'border border-black bg-white' : 'bg-slate-800/80'}`}></div>
+                                        <div className={`w-full h-[15%] rounded-[1px] ${isPrintMode ? 'border border-black bg-white' : 'bg-slate-800/80'}`}></div>
+                                    </div>
+                                )}
+
+                                <div className={`relative z-30 w-full h-full flex pointer-events-none px-1 overflow-hidden ${textColClass}`}>
+                                    <p style={{ fontSize: fontSize, color: isPrintMode ? '#000' : '#fff' }} className={`font-black tracking-[0.1em] leading-none whitespace-nowrap overflow-hidden text-ellipsis ${textWidthClass} uppercase ${isPrintMode ? 'shadow-none' : 'drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]'}`}>{displayName}</p>
+                                </div>
+
+                                {isThisActive && !isPrintMode && !isDraggingThis && (
+                                    <>
+                                        <button onPointerDown={(e) => handleNudgeStart(e, vessel.id, 1)} onPointerUp={handleNudgeStop} onPointerLeave={handleNudgeStop} className="absolute top-1/2 -left-8 -translate-y-1/2 p-1 text-white/80 hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-[100] active:scale-75 transition-all cursor-pointer group" style={{ pointerEvents: 'auto' }} title="Nhích Trái"><ChevronLeft size={24} strokeWidth={4} className="group-hover:-translate-x-1 transition-transform" /></button>
+                                        <button onPointerDown={(e) => handleNudgeStart(e, vessel.id, -1)} onPointerUp={handleNudgeStop} onPointerLeave={handleNudgeStop} className="absolute top-1/2 -right-8 -translate-y-1/2 p-1 text-white/80 hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-[100] active:scale-75 transition-all cursor-pointer group" style={{ pointerEvents: 'auto' }} title="Nhích Phải"><ChevronRight size={24} strokeWidth={4} className="group-hover:translate-x-1 transition-transform" /></button>
+                                    </>
+                                )}
+                              </div>
+                          </div>
+                      );
+                  })}
+                </div>
+
+                {/* PIER ZONE */}
+                <div className={`relative w-full h-[140px] flex flex-row flex-shrink-0 z-30 ${isPrintMode ? 'shadow-none border-t border-black' : 'shadow-2xl'}`}>
+                    <div className={`w-[25%] flex items-center justify-center relative overflow-hidden ${isPrintMode ? 'bg-white border-t-2 border-black' : 'bg-slate-300 border-t-8 border-slate-400'}`}>
+                        {!isPrintMode && <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000 0, #000 1px, transparent 0, transparent 20px)' }}></div>}
+                        <span className={`text-xl sm:text-3xl font-black italic ${isPrintMode ? 'text-black opacity-100' : 'text-slate-500 opacity-30'}`}>TCTT (300m)</span>
+                    </div>
+
+                    <div className={`w-[50%] relative ${isPrintMode ? 'bg-white border-t-2 border-black border-x' : 'bg-[#94A3B8] border-t-8 border-[#475569] border-x border-slate-500 shadow-inner'}`}>
+                        <div className={`absolute top-0 left-0 w-full h-3 z-10 flex items-center ${isPrintMode ? 'bg-white border-b border-black' : 'bg-slate-800 border-b border-slate-600'}`}>
+                            {Array.from({ length: 13 }).map((_, i) => (
+                                <div key={`ruler-${i}`} className="absolute top-0 flex flex-col items-center" style={{ right: `${((i * 50) / 600) * 100}%`, transform: 'translateX(50%)' }}>
+                                    <div className={`w-0.5 h-1.5 ${isPrintMode ? 'bg-black' : 'bg-slate-400'}`}></div>
+                                    <div className={`mt-0.5 text-[6px] font-black px-1 rounded shadow-md leading-none py-0.5 ${isPrintMode ? 'bg-white text-black border border-black shadow-none' : 'bg-slate-800 text-yellow-400 border border-slate-600'}`}>{i * 50}m</div>
+                                </div>
+                            ))}
+                        </div>
+                        
+                        {(!isPrintMode || pdfConfig.showQcRanges) && (
+                            <div className={`absolute top-6 left-0 w-full flex flex-col gap-[2px] px-6 z-20 pointer-events-none ${isPrintMode ? 'opacity-100' : 'opacity-80'}`}>
+                                {qcTasks.map((qc, idx) => (
+                                    <div key={`qc-range-${qc.id || idx}`} className={`relative h-[8px] w-full rounded-full flex items-center ${isPrintMode ? 'bg-transparent' : 'bg-black/10'}`}>
+                                        <div className={`absolute h-full rounded-full transition-all flex items-center justify-center overflow-hidden ${isPrintMode ? 'shadow-none' : 'shadow-sm'}`} 
+                                             style={{ right: `${(qc.rangeStart/600)*100}%`, width: `${((qc.rangeEnd-qc.rangeStart)/600)*100}%`, backgroundColor: isPrintMode ? 'transparent' : qc.color, border: isPrintMode ? `1px dashed ${qc.color}` : 'none' }}>
+                                            <span className={`text-[6px] font-black px-1 tracking-widest ${isPrintMode ? 'text-black' : 'text-white'}`}>{String(qc.name)}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="absolute top-0 left-0 w-full h-full z-50 pointer-events-none">
+                             {qcTasks.map((qc, idx) => {
+                                 if(!qc) return null;
+                                 const isDraggingThisQc = isDragging && dragStartRef.current.type === 'qc' && dragStartRef.current.id === qc.id;
+                                 return (
+                                    <div key={`qc-body-${qc.id || idx}`} className={`absolute top-10 flex flex-col items-center transition-transform pointer-events-auto ${isPrintMode ? 'bg-white border-[1.5px] border-black shadow-none' : 'bg-slate-300 border-2 border-slate-400 shadow-[0_10px_20px_rgba(0,0,0,0.5)]'} ${isDraggingThisQc && !isPrintMode ? 'z-50 scale-105 ring-2 ring-blue-500' : (!isPrintMode ? 'hover:-translate-y-1 hover:brightness-110 z-40' : 'z-40')}`} style={{ right: `${(Number(qc.pos||0)/600)*100}%`, width: `${(30/600)*100}%`, height: '4rem', transform: 'translateX(50%)' }}>
+                                        <div className={`absolute bottom-full transition-all duration-[600ms] origin-bottom border-x border-t rounded-t-sm z-50 ${isPrintMode ? 'bg-white border-black border-[1px]' : (qc.boomDown ? 'bg-slate-800 border-black/50 shadow-[0_20px_25px_rgba(0,0,0,0.5)]' : 'bg-red-500 border-black/50 shadow-[0_20px_25px_rgba(0,0,0,0.5)]')}`} style={{ height: isPrintMode ? (qc.boomDown ? '15px' : '5px') : (qc.boomDown ? '50px' : '10px'), width: '8px' }}>
+                                           {!isPrintMode && <div className="w-full h-full opacity-40" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 4px, #fff 4px, #fff 6px)' }}></div>}
+                                        </div>
+                                        <div onMouseDown={(e) => handleMouseDown(e, 'qc', qc.id)} className={`flex-1 w-full flex flex-col items-center justify-start pt-1 relative z-50 pointer-events-auto cursor-grab active:cursor-grabbing overflow-hidden ${isPrintMode ? 'bg-white' : 'bg-gradient-to-b from-slate-200 to-slate-400'}`}>
+                                            <div className={`absolute top-0 w-full h-1.5 ${isPrintMode ? 'opacity-100' : 'opacity-80'}`} style={{ backgroundColor: qc.color }}></div>
+                                            {!isPrintMode && <div onMouseDown={(e) => { e.stopPropagation(); toggleQcSelection(qc.id); }} className={`mt-1.5 mb-1.5 w-4 h-4 flex items-center justify-center rounded border shadow-inner cursor-pointer transition-all ${qc.selected ? 'bg-blue-500 border-blue-700 hover:bg-blue-600' : 'bg-white border-slate-400 hover:bg-slate-100'}`}>{qc.selected && <span className="text-white font-black text-[10px] leading-none">✓</span>}</div>}
+                                            <span className={`text-[6px] font-black px-1 rounded mt-0.5 uppercase ${isPrintMode ? 'text-black bg-white border border-black shadow-none' : 'text-slate-800 bg-white/90 border border-slate-300 shadow-sm'}`}>{String(qc.name || '')}</span>
+                                            <span className={`text-[8px] font-black mt-0.5 leading-none ${isPrintMode ? 'text-black' : 'text-slate-800'}`}>{Math.round(qc.pos||0)}</span>
+                                            {!isPrintMode && <div className={`absolute -top-8 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded shadow-xl whitespace-nowrap ${isDraggingThisQc ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}>{Math.round(qc.pos||0)}m</div>}
+                                        </div>
+                                    </div>
+                                 )
+                             })}
+                        </div>
+
+                        <div className="absolute top-0 left-0 w-full h-full z-30 pointer-events-none">
+                            {CMIT_BOLLARDS.map((b, idx) => (
+                                <div key={`bollard-${b.id || idx}`} className={`absolute top-0 h-full w-[1px] flex flex-col items-center group ${isPrintMode ? 'bg-black/10' : 'bg-white/20'}`} style={{ right: `${(Number(b.pos||0)/600)*100}%` }}>
+                                    <div className={`w-3 h-3 rounded-full -mt-1.5 transition-all relative flex items-center justify-center pointer-events-auto ${isPrintMode ? 'bg-white border border-black shadow-none' : 'bg-[#0F172A] border border-slate-400 shadow-md group-hover:bg-blue-600 group-hover:border-blue-300 hover:scale-150 hover:z-50 cursor-help'}`}>
+                                        <span className={`text-[5px] font-black leading-none ${isPrintMode ? 'text-black' : 'text-white'}`}>{String(b.id)}</span>
+                                        {!isPrintMode && <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[9px] font-black px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl pointer-events-none">Cọc {String(b.id)} ({Number(b.pos)}m)</div>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {!isPrintMode && (
+                            <div className="absolute bottom-2 sm:bottom-4 left-0 w-full flex px-4 gap-4 items-end pointer-events-none opacity-20">
+                                <div className="flex-1 h-12 sm:h-20 bg-blue-900/50 rounded-xl flex items-center justify-center font-black text-white text-lg sm:text-2xl tracking-widest">B2</div>
+                                <div className="flex-1 h-12 sm:h-20 bg-blue-900/50 rounded-xl flex items-center justify-center font-black text-white text-lg sm:text-2xl tracking-widest">B1</div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className={`w-[25%] flex items-center justify-center relative overflow-hidden ${isPrintMode ? 'bg-white border-t-2 border-black' : 'bg-slate-300 border-t-8 border-slate-400'}`}>
+                        {!isPrintMode && <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(-45deg, #000 0, #000 1px, transparent 0, transparent 20px)' }}></div>}
+                        <span className={`text-xl sm:text-3xl font-black italic ${isPrintMode ? 'text-black opacity-100' : 'text-slate-500 opacity-30'}`}>Hưng Thái (300m)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </div>
+    );
+  };
+
+  // -------------------------------------------------------------
+  // RENDER: SCHEDULE MAP (KẾ HOẠCH BẾN GANTT CHART)
+  // -------------------------------------------------------------
+  const renderScheduleMap = () => {
+    // 1. Tính toán trục Thời Gian (Y-axis)
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const startMs = scheduleStartDate.getTime();
+    const totalMs = scheduleDays * msPerDay;
+    
+    // Mảng các ngày để vẽ lưới trục Y
+    const daysArr = Array.from({ length: scheduleDays }).map((_, i) => {
+        const d = new Date(startMs + i * msPerDay);
+        return {
+            dateStr: d.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+            isWeekend: d.getDay() === 0 || d.getDay() === 6
+        };
+    });
+
+    return (
+        <div className="w-full h-full bg-slate-50 rounded-[32px] border border-slate-200 shadow-inner flex flex-col overflow-hidden relative">
+            
+            {/* Thanh công cụ cấu hình biểu đồ Kế Hoạch */}
+            <div className="bg-white px-6 py-3 border-b border-slate-200 flex items-center justify-between shadow-sm z-30 flex-shrink-0">
+                <div className="flex items-center gap-4">
+                    <h2 className="text-sm font-black text-[#002D54] tracking-widest flex items-center gap-2 uppercase">
+                        <CalendarDays size={18} className="text-blue-600"/> Lịch chiếm dụng cầu bến
+                    </h2>
+                    <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                        <button onClick={() => setScheduleDays(3)} className={`px-3 py-1 rounded text-[10px] font-black transition-colors uppercase ${scheduleDays === 3 ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}>3 Ngày</button>
+                        <button onClick={() => setScheduleDays(7)} className={`px-3 py-1 rounded text-[10px] font-black transition-colors uppercase ${scheduleDays === 7 ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}>7 Ngày</button>
+                        <button onClick={() => setScheduleDays(14)} className={`px-3 py-1 rounded text-[10px] font-black transition-colors uppercase ${scheduleDays === 14 ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:bg-slate-200'}`}>14 Ngày</button>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bắt đầu từ:</span>
+                    <input 
+                        type="date" 
+                        value={scheduleStartDate.toISOString().split('T')[0]} 
+                        onChange={(e) => {
+                            const d = new Date(e.target.value);
+                            d.setHours(0,0,0,0);
+                            if(!isNaN(d.getTime())) setScheduleStartDate(d);
+                        }}
+                        className="bg-slate-100 border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-black text-[#002D54] outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button onClick={() => { const d = new Date(); d.setHours(0,0,0,0); setScheduleStartDate(d); }} className="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-lg text-[10px] font-black transition-colors uppercase tracking-widest shadow-sm">Hôm nay</button>
+                </div>
+            </div>
+
+            {/* Trục X: Chiều dài cầu bến (Y chang tab Mô Phỏng) */}
+            <div className="relative w-full h-[40px] flex flex-row flex-shrink-0 z-20 border-b border-slate-300 shadow-sm bg-white">
+                <div className="w-[25%] flex items-center justify-center bg-slate-100 border-r border-slate-200">
+                    <span className="text-xs font-black text-slate-400 italic">TCTT (300m)</span>
+                </div>
+                <div className="w-[50%] relative bg-slate-50 shadow-inner">
+                    <div className="absolute top-0 left-0 w-full h-full flex items-end pb-1 border-b-4 border-slate-400">
+                        {Array.from({ length: 13 }).map((_, i) => (
+                            <div key={`sched-ruler-${i}`} className="absolute top-0 h-full flex flex-col justify-end items-center" style={{ right: `${((i * 50) / 600) * 100}%`, transform: 'translateX(50%)' }}>
+                                <div className="w-px h-full bg-slate-200 absolute top-0 -z-10"></div>
+                                <div className="w-0.5 h-2 bg-slate-400"></div>
+                                <div className="text-[8px] font-black text-slate-600 leading-none mt-1">{i * 50}m</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="w-[25%] flex items-center justify-center bg-slate-100 border-l border-slate-200">
+                    <span className="text-xs font-black text-slate-400 italic">Hưng Thái (300m)</span>
+                </div>
+            </div>
+
+            {/* Main Grid: Biểu đồ thời gian (Scrollable Y, Pan-able X) */}
+            <div className="flex-1 overflow-hidden bg-slate-50 relative cursor-grab active:cursor-grabbing"
+                 ref={mapContainerRef} 
+                 onMouseDown={(e) => handleMouseDown(e, 'scheduleMap')}>
+                
+                <div ref={innerMapRef} className="w-full h-full flex relative transition-transform duration-100 ease-linear" 
+                     style={{ transformOrigin: 'top center', transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})` }}>
+                    
+                    {/* Cột mốc thời gian (Y-Axis Labels) */}
+                    <div className="absolute left-0 top-0 h-full w-[60px] bg-white border-r border-slate-200 z-30 flex flex-col drop-shadow-md">
+                        {daysArr.map((day, i) => (
+                            <div key={`y-axis-${i}`} className={`flex-1 flex flex-col items-center justify-center border-b border-slate-200 ${day.isWeekend ? 'bg-red-50/50 text-red-600' : 'text-slate-600'}`}>
+                                <span className="text-[10px] font-black uppercase">{day.dateStr.split(' ')[0]}</span>
+                                <span className="text-xs font-black">{day.dateStr.split(' ')[1]}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Vùng Lưới vẽ Tàu */}
+                    <div className="flex-1 h-full relative ml-[60px]">
+                        
+                        {/* Lưới ngang (Theo ngày) */}
+                        <div className="absolute inset-0 flex flex-col pointer-events-none z-0">
+                            {daysArr.map((day, i) => (
+                                <div key={`grid-y-${i}`} className={`flex-1 border-b border-slate-200 w-full relative ${day.isWeekend ? 'bg-red-50/20' : ''}`}>
+                                    {/* Line phân chia 12h trưa */}
+                                    <div className="absolute top-1/2 left-0 w-full h-px border-t border-dashed border-slate-200 opacity-50"></div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Lưới dọc (Kéo dài từ thước đo cầu bến xuống) */}
+                        <div className="absolute inset-0 pointer-events-none z-0 flex">
+                            <div className="w-[25%] bg-slate-100/50 border-r border-slate-200"></div>
+                            <div className="w-[50%] relative">
+                                {Array.from({ length: 13 }).map((_, i) => (
+                                    <div key={`grid-x-${i}`} className="absolute top-0 h-full w-px bg-slate-200/50" style={{ right: `${((i * 50) / 600) * 100}%` }}></div>
+                                ))}
+                                {/* Highlight vùng Bollard chính */}
+                                <div className="absolute inset-0 border-x-2 border-blue-200/30 bg-blue-50/10"></div>
+                            </div>
+                            <div className="w-[25%] bg-slate-100/50 border-l border-slate-200"></div>
+                        </div>
+
+                        {/* RENDER CÁC KHỐI TÀU LÊN GANTT CHART */}
+                        {vessels.map((vessel, index) => {
+                            if (!vessel || !vessel.eta) return null;
+                            
+                            const vEtaMs = new Date(vessel.eta).getTime();
+                            const vEtdMs = new Date(vessel.etd || getEtdFallback(vessel.eta)).getTime();
+                            
+                            // Chỉ render nếu tàu nằm trong khoảng thời gian đang xem
+                            if (vEtdMs < startMs || vEtaMs > startMs + totalMs) return null;
+
+                            // Tọa độ Y & Chiều cao (Theo Thời gian)
+                            const topPercent = Math.max(0, ((vEtaMs - startMs) / totalMs) * 100);
+                            const bottomPercent = Math.min(100, ((vEtdMs - startMs) / totalMs) * 100);
+                            const heightPercent = bottomPercent - topPercent;
+                            
+                            if (heightPercent <= 0) return null;
+
+                            // Tọa độ X & Chiều rộng (Theo Cầu bến)
+                            const W = vessel.loa || 200;
+                            const isBarge = vessel.type === 'barge';
+                            const shipWidthPercent = (W / totalVisLength) * 100;
+                            
+                            const { color } = getVesselStyles(vessel);
+                            const isThisActive = vessel.id === activeVesselId;
+
+                            // Thuật toán "Xếp Hình" dàn ngang cho Sà lan cập mạn nhiều lớp
+                            const vesselTier = vessel.tier || 1;
+                            const zIndexBase = 10 + vesselTier;
+                            
+                            // Tính toán tọa độ gốc
+                            const baseRightPosPercent = ((bufferLength + (vessel.bowPos||0)) / totalVisLength) * 100;
+                            // Khoảng hở nhỏ giữa các mảnh ghép (0.15% chiều rộng bến ~ 1.8m thực tế)
+                            const puzzleGapPercent = 0.15; 
+                            
+                            // Tịnh tiến sang ngang để các lớp không đè lên nhau (nối tiếp nhau)
+                            const adjustedRightPosPercent = baseRightPosPercent + (vesselTier - 1) * (shipWidthPercent + puzzleGapPercent);
+
+                            return (
+                                <div 
+                                    key={`sched-vessel-${vessel.id || index}`}
+                                    onMouseDown={(e) => handleMouseDown(e, 'vessel', vessel.id)}
+                                    className={`absolute flex flex-col overflow-hidden rounded-md border cursor-pointer transition-all pointer-events-auto group
+                                        ${isThisActive ? 'ring-2 ring-blue-500 z-50 brightness-110' : 'hover:brightness-110 hover:z-40'}`}
+                                    style={{
+                                        top: `${topPercent}%`,
+                                        height: `${heightPercent}%`,
+                                        minHeight: '26px', // Đảm bảo luôn hiển thị được Header
+                                        right: `${adjustedRightPosPercent}%`,
+                                        width: `${shipWidthPercent}%`,
+                                        backgroundColor: `${color}F2`,
+                                        borderTopColor: isThisActive ? '#fff' : 'rgba(255,255,255,0.4)',
+                                        borderRightColor: isThisActive ? '#fff' : 'rgba(255,255,255,0.3)',
+                                        borderBottomColor: isThisActive ? '#fff' : 'rgba(255,255,255,0.3)',
+                                        borderLeftColor: isThisActive ? '#fff' : 'rgba(255,255,255,0.3)',
+                                        zIndex: isThisActive ? 50 : zIndexBase,
+                                        boxShadow: 'none',
+                                        borderTopWidth: '2px',
+                                    }}
+                                    title={`${vessel.name}\nETA: ${new Date(vessel.eta).toLocaleString('vi-VN')}\nETD: ${new Date(vessel.etd || getEtdFallback(vessel.eta)).toLocaleString('vi-VN')}\nLớp cập (Tier): ${vesselTier}`}
+                                >
+                                    {/* Header của block tàu */}
+                                    <div className="bg-black/20 w-full px-1.5 py-0.5 flex justify-between items-center text-[8px] text-white font-black uppercase tracking-wider backdrop-blur-sm flex-shrink-0">
+                                        <span className="truncate pr-1 drop-shadow-md">{vessel.name}</span>
+                                        {isBarge && vesselTier > 1 && <span className="bg-red-500 px-1 rounded text-[6px] flex-shrink-0">T{vesselTier}</span>}
+                                    </div>
+                                    
+                                    {/* Thời gian hiển thị bên trong block nếu đủ không gian */}
+                                    {heightPercent > 2 && (
+                                        <div className="flex-1 w-full flex flex-col justify-between p-1 opacity-0 group-hover:opacity-100 transition-opacity min-h-0">
+                                            <span className="text-[7px] text-white/90 font-bold leading-tight drop-shadow-sm truncate">↓ {new Date(vessel.eta).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                                            <div className="flex-1 flex items-center justify-center min-h-0">
+                                                <span className="text-[10px] text-white font-black opacity-30 rotate-[-15deg]">{W}m</span>
+                                            </div>
+                                            <span className="text-[7px] text-white/90 font-bold leading-tight drop-shadow-sm text-right truncate">↑ {new Date(vessel.etd || getEtdFallback(vessel.eta)).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+            
+            {/* Ghi chú dưới cùng */}
+            <div className="bg-slate-100 px-4 py-2 text-[9px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-4 flex-shrink-0 border-t border-slate-200">
+                <span className="flex items-center gap-1 text-blue-600"><Info size={12}/> LƯU Ý KẾ HOẠCH BẾN:</span>
+                <span>• Trục ngang là Tọa độ Bến | Trục dọc là Thời gian (ETA tới ETD)</span>
+                <span className="text-emerald-600 font-black">• Các Sà Lan cập chung một vị trí (Lớp 2, 3...) sẽ tự động dàn ngang nối tiếp nhau như xếp hình để không bị che khuất.</span>
+            </div>
+        </div>
+    );
+  };
+
+
+  const renderTabButton = (id, label, Icon) => (
+    <button onClick={() => setActiveTab(id)} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-black text-[10px] tracking-widest transition-all uppercase ${activeTab === id ? 'bg-[#002D54] text-white shadow-lg' : 'text-slate-500 hover:bg-slate-100 hover:text-[#002D54]'}`}>
+      <Icon size={14} strokeWidth={3} /><span>{String(label || '')}</span>
+    </button>
+  );
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-[#002D54]">
+        <div className="flex flex-col items-center gap-6"><Activity className="w-16 h-16 text-sky-400 animate-spin" /><p className="text-white font-black tracking-[0.5em] text-sm uppercase">Đang tải Dữ liệu Cảng...</p></div>
+      </div>
+    );
+  }
+
+  const { bowBollard: bow, sternBollard: stern } = activeVessel && activeVessel.bowPos >= -200 
+    ? getMooringBollards(activeVessel, mooringPercent) 
+    : { bowBollard:{id:'-'}, sternBollard:{id:'-'} };
+
+  return (
+    <div className={`h-screen text-[#002D54] flex flex-col overflow-hidden select-none tracking-wide relative ${isPrintMode ? 'bg-white' : 'bg-[#F8FAFC]'}`}>
+      {!isPrintMode && (
+          <header className="bg-white border-b border-slate-200 h-12 flex-shrink-0 z-50 px-6 flex items-center justify-between shadow-sm uppercase">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#002D54] p-1.5 rounded-lg text-white shadow-md"><Ship size={18} /></div>
+              
+              <h1 onClick={handleTitleClick} className="text-base font-black tracking-tighter italic leading-none cursor-pointer select-none hover:opacity-80 transition-opacity">
+                CMIT VESSEL BERTHING <span className="text-blue-600 tracking-normal opacity-50 not-italic font-semibold text-xs">v39 (NESTED SCHEDULE)</span>
+              </h1>
+            </div>
+            <div className="flex items-center gap-3">
+                <button onClick={openPdfOptions} disabled={isExportingPDF} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-1.5 rounded-lg font-black text-[9px] transition-all flex items-center gap-2 shadow-lg active:scale-95 disabled:opacity-50">
+                    {isExportingPDF ? <Activity size={14} className="animate-spin"/> : <Printer size={14} />} 
+                    {isExportingPDF ? 'ĐANG TẠO PDF...' : 'TẢI PDF BẢN IN'}
+                </button>
+                <button onClick={saveToHistory} className="bg-[#0072BC] hover:bg-[#005a96] text-white px-4 py-1.5 rounded-lg font-black text-[9px] transition-all flex items-center gap-2 shadow-lg active:scale-95"><Save size={14} /> Tự động lưu đám mây</button>
+            </div>
+          </header>
+      )}
+
+      {!isPrintMode && (
+          <nav className="bg-white/80 backdrop-blur-md px-6 py-1.5 border-b border-slate-200 flex justify-between items-center flex-shrink-0 relative z-40 overflow-x-auto no-scrollbar">
+            <div className="flex gap-1.5 flex-shrink-0">
+                {renderTabButton("visual", "MÔ PHỎNG BẾN", Anchor)}
+                {renderTabButton("schedule", "KẾ HOẠCH BẾN", CalendarDays)}
+                {renderTabButton("vessel", "DỮ LIỆU TÀU", Settings2)}
+                {renderTabButton("qc", "KẾ HOẠCH CẨU", ClipboardList)}
+                {renderTabButton("summary", "BÁO CÁO", LayoutDashboard)}
+                {renderTabButton("history", "LỊCH SỬ", History)}
+            </div>
+            {activeVessel && (
+                <div className="flex gap-4 items-center flex-shrink-0 ml-4">
+                    <div className="bg-[#002D54] text-white px-3 py-1 rounded-full text-[9px] font-black italic shadow-xl tracking-tighter uppercase">{activeVessel.type === 'barge' ? 'SÀ LAN' : 'TÀU'} ↔ Cọc #{String(bow?.id || '-')} - #{String(stern?.id || '-')}</div>
+                    <div className="text-[9px] font-black text-slate-400 italic">User: {String(userId || '').slice(0,8)}</div>
+                </div>
+            )}
+          </nav>
+      )}
+
+      <main className={`flex-1 overflow-hidden relative z-10 ${isPrintMode ? 'p-0 absolute inset-0 z-50 bg-white' : 'p-3'}`}>
+        <div className="w-full h-full flex flex-col">
+          
+          {/* TAB 1: VISUAL MAP */}
+          {activeTab === 'visual' && (<div className="flex-1 animate-in fade-in duration-300">{renderVesselMap()}</div>)}
+
+          {/* TAB 2: SCHEDULE MAP */}
+          {activeTab === 'schedule' && (<div className="flex-1 animate-in fade-in slide-in-from-bottom-4 duration-300">{renderScheduleMap()}</div>)}
+
+          {/* TAB 3: DỮ LIỆU TÀU */}
+          {activeTab === 'vessel' && activeVessel && !isPrintMode && (
+            <div className="h-full overflow-y-auto custom-scrollbar animate-in slide-in-from-left-4 duration-400 uppercase">
+              <div className="bg-white rounded-3xl border border-slate-200 shadow-xl p-8 max-w-6xl mx-auto mt-4 mb-8">
+                  <div className="flex justify-between items-end border-b border-slate-200 pb-4 mb-6">
+                     <div>
+                        <h2 className="text-3xl font-black text-[#002D54] italic leading-none">{String(activeVessel.name || 'UNKNOWN').toUpperCase()}</h2>
+                        <p className="text-sm font-bold text-blue-600 mt-1 tracking-widest uppercase">{activeVessel.type === 'barge' ? 'HỒ SƠ SÀ LAN' : 'HỒ SƠ THÔNG SỐ TÀU (MASTER FILE)'}</p>
+                     </div>
+                     
+                     <div className="flex items-center">
+                         {isVesselUnlocked ? (
+                             <button onClick={() => setIsVesselUnlocked(false)} className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-black flex items-center gap-2 uppercase tracking-widest border border-emerald-200 hover:bg-emerald-100 transition-colors shadow-sm">
+                                 <Unlock size={16}/> ĐANG MỞ KHÓA SỬA MÁY MÓC
+                             </button>
+                         ) : (
+                             <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+                                 <Lock size={16} className="text-slate-400 ml-2"/>
+                                 <input type="password" value={vesselPin} onChange={e => setVesselPin(e.target.value)} onKeyDown={e => { if(e.key === 'Enter') { if(vesselPin === '1506') { setIsVesselUnlocked(true); setVesselPin(''); } else { alert('Sai mã PIN bảo mật!'); setVesselPin(''); } } }} placeholder="MÃ PIN..." className="w-20 bg-transparent outline-none text-sm font-black text-center text-slate-700 placeholder-slate-300" />
+                                 <button onClick={() => { if(vesselPin === '1506') { setIsVesselUnlocked(true); setVesselPin(''); } else { alert('Sai mã PIN bảo mật!'); setVesselPin(''); } }} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-[10px] font-black hover:bg-blue-700 uppercase tracking-widest transition-colors shadow-md">MỞ KHÓA</button>
+                             </div>
+                         )}
+                     </div>
+                  </div>
+
+                  <div className="flex flex-col gap-6">
+                      
+                      {/* NHÓM 2: LỊCH TRÌNH */}
+                      <div className="bg-emerald-50/30 p-6 rounded-3xl border border-emerald-100 flex flex-col gap-5">
+                          <div className="flex justify-between items-center border-b border-emerald-200 pb-2">
+                              <h4 className="text-xs font-black text-emerald-800 italic tracking-widest flex items-center gap-2">
+                                  <Navigation size={16}/> THÔNG TIN CHUYẾN (ĐƯỢC CHỈNH SỬA TỰ DO)
+                              </h4>
+                              <span className="text-[9px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded uppercase font-black tracking-widest">Thay đổi theo chuyến</span>
+                          </div>
+                          
+                          <div className="grid grid-cols-12 gap-5">
+                              <div className="col-span-12 md:col-span-3">
+                                  <InputField label="CHUYẾN (VOYAGE)" value={activeVessel.voyage} disabled={false} onChange={(v) => updateActiveVessel({ voyage: String(v).toUpperCase() })} />
+                              </div>
+                              <div className="col-span-12 md:col-span-3">
+                                  <InputField label="HƯỚNG CẬP" value={activeVessel.direction} disabled={false} onChange={(v) => updateActiveVessel({ direction: String(v).toUpperCase() })} />
+                              </div>
+                              <div className="col-span-6 md:col-span-3">
+                                  <InputField label="CẬP DỰ KIẾN (ETA)" type="datetime-local" value={activeVessel.eta || ''} disabled={false} onChange={(v) => updateActiveVessel({ eta: v })} />
+                              </div>
+                              <div className="col-span-6 md:col-span-3">
+                                  <InputField label="RỜI DỰ KIẾN (ETD)" type="datetime-local" value={activeVessel.etd || ''} disabled={false} onChange={(v) => updateActiveVessel({ etd: v })} />
+                              </div>
+                              
+                              {activeVessel.type !== 'barge' && (
+                                  <div className="col-span-12 flex flex-col gap-1 mt-2">
+                                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">KHOẢNG BUỘC DÂY (%/LOA)</label>
+                                      <div className={`flex items-center justify-between h-full px-4 rounded-xl border ${isVesselUnlocked ? 'bg-blue-50 border-blue-200 shadow-inner' : 'bg-slate-100/50 border-slate-200/60'}`}>
+                                          <input type="number" value={mooringPercent} disabled={!isVesselUnlocked} onChange={(e) => { const v = parseInt(e.target.value) || 0; setMooringPercent(v); syncToCloud(null, null, v); }} className="w-12 text-center text-blue-800 font-black outline-none text-sm bg-white border border-blue-200 rounded py-1 shadow-sm disabled:opacity-50" />
+                                          <div className="flex flex-col text-right py-2">
+                                              <span className="text-[10px] font-black text-slate-500 uppercase">MŨI / LÁI TƯƠNG ĐƯƠNG</span>
+                                              <span className="text-sm font-black text-blue-800">{getMooringSpace(activeVessel, mooringPercent)} MÉT CHUẨN</span>
+                                          </div>
+                                      </div>
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+
+                      {/* NHÓM 1: CƠ BẢN */}
+                      <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 flex flex-col gap-5">
+                          <h4 className="text-xs font-black text-blue-800 border-b border-blue-100 pb-2 italic tracking-widest flex items-center gap-2">
+                              <Ship size={16}/> THÔNG TIN CƠ BẢN & NHẬN DIỆN
+                          </h4>
+                          <div className="grid grid-cols-12 gap-5">
+                              <div className="col-span-5"><InputField label="VESSEL NAME" value={activeVessel.name} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ name: String(v).toUpperCase() })} /></div>
+                              <div className="col-span-2"><InputField label="LOA (m)" type="number" value={activeVessel.loa} disabled={!isVesselUnlocked} onChange={(v) => { const parsed = v === '' ? '' : Math.round(v); updateActiveVessel({ loa: parsed, sternPos: parsed === '' ? activeVessel.sternPos : Math.round((Number(activeVessel.bowPos)||0) + parsed) }); }} /></div>
+                              {activeVessel.type !== 'barge' && (
+                                  <div className="col-span-2"><InputField label="MŨI-CABIN (m)" type="number" value={activeVessel.bowToCabin} disabled={!isVesselUnlocked} onChange={(v) => { const parsed = v === '' ? '' : Math.round(v); if (parsed === '') { updateActiveVessel({ bowToCabin: '' }); } else { let newCabinPos; if (activeVessel.side === 'PS') { newCabinPos = (activeVessel.sternPos || 0) - parsed; } else { newCabinPos = (activeVessel.bowPos || 0) + parsed; } updateActiveVessel({ bowToCabin: parsed, cabinPos: newCabinPos }); } }} /></div>
+                              )}
+                              <div className={`${activeVessel.type === 'barge' ? 'col-span-5' : 'col-span-3'} flex flex-col gap-1`}>
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">MÀU HIỂN TRÊN MAP</label>
+                                  <div className={`flex items-center h-full gap-3 px-3 py-2 rounded-xl border ${isVesselUnlocked ? 'bg-white border-blue-200 shadow-inner' : 'bg-slate-100/50 border-slate-200/60'}`}>
+                                      <input type="color" value={activeVessel.color || '#2563eb'} disabled={!isVesselUnlocked} onChange={(e) => updateActiveVessel({ color: e.target.value })} className={`w-10 h-8 p-0 border-0 rounded bg-transparent ${isVesselUnlocked ? 'cursor-pointer' : 'opacity-50 pointer-events-none'}`} />
+                                      <button onClick={() => updateActiveVessel({ color: "" })} disabled={!isVesselUnlocked} className={`text-[9px] border px-3 py-1.5 rounded-lg font-bold uppercase transition-colors flex-1 ${isVesselUnlocked ? 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200' : 'bg-slate-100 border-transparent text-slate-400'}`}>Khôi phục</button>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* NHÓM 3: TRANG THIẾT BỊ */}
+                      <div className="bg-slate-50/50 p-6 rounded-3xl border border-slate-100 flex flex-col gap-5">
+                          <h4 className="text-xs font-black text-purple-800 border-b border-purple-100 pb-2 italic tracking-widest flex items-center gap-2"><Settings2 size={16}/> TRANG THIẾT BỊ LÀM HÀNG</h4>
+                          <div className="grid grid-cols-12 gap-5">
+                              <div className="col-span-3"><InputField label="TWISTLOCK" value={activeVessel.twistlock} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ twistlock: fixTypos(v) })} /></div>
+                              <div className="col-span-3"><InputField label="REEFER MOTOR" value={activeVessel.reeferMotor} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ reeferMotor: String(v).toUpperCase() })} /></div>
+                              <div className="col-span-3"><InputField label="FLIP H/C" value={activeVessel.flipHC} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ flipHC: String(v).toUpperCase() })} /></div>
+                              <div className="col-span-3"><InputField label="GEAR BOXES" value={activeVessel.gearBoxes} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ gearBoxes: String(v).toUpperCase() })} /></div>
+                          </div>
+                      </div>
+
+                      {/* NHÓM 4: GHI CHÚ */}
+                      <div className="grid grid-cols-12 gap-6">
+                          <div className="col-span-12 lg:col-span-5 bg-slate-50/50 p-6 rounded-3xl border border-slate-100 flex flex-col gap-5">
+                              <h4 className="text-xs font-black text-amber-800 border-b border-amber-100 pb-2 italic tracking-widest flex items-center gap-2"><Maximize2 size={16}/> THÔNG SỐ CHIỀU CAO (MÉT)</h4>
+                              <div className="flex flex-col gap-4">
+                                  <InputField label="KEEL TO HATCH COVER" value={activeVessel.keelToHatch} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ keelToHatch: String(v).toUpperCase() })} />
+                                  <InputField label="KEEL TO NAVIGATION DECK" value={activeVessel.keelToNav} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ keelToNav: String(v).toUpperCase() })} />
+                                  <InputField label="KEEL TO TOP MAST" value={activeVessel.keelToMast} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ keelToMast: String(v).toUpperCase() })} />
+                              </div>
+                          </div>
+                          
+                          <div className="col-span-12 lg:col-span-7 bg-amber-50/30 p-6 rounded-3xl border border-amber-200/50 flex flex-col gap-5 h-full relative group">
+                              <div className="flex justify-between items-center border-b border-amber-200 pb-2">
+                                  <h4 className="text-xs font-black text-red-800 italic tracking-widest flex items-center gap-2"><AlertCircle size={16}/> GHI CHÚ QUAN TRỌNG (REMARK)</h4>
+                                  {(() => {
+                                      const hasExtractableData = activeVessel?.remark && (activeVessel.remark.includes('KEEL TO') || activeVessel.remark.includes('DISTANCE FROM STERN') || activeVessel.remark.includes('TWIST LOCK') || activeVessel.remark.includes('REEFER MOTOR'));
+                                      return (
+                                          <button disabled={!isVesselUnlocked || !activeVessel.remark} onClick={handleAutoExtractRemark} className={`text-[9px] px-3 py-1.5 rounded shadow-sm font-black uppercase tracking-widest flex items-center gap-1 transition-all disabled:opacity-50 disabled:grayscale ${hasExtractableData ? 'bg-blue-600 text-white animate-pulse shadow-[0_0_15px_rgba(37,99,235,0.6)]' : 'bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white'}`}><Zap size={12} className="fill-current"/> TRÍCH XUẤT</button>
+                                      )
+                                  })()}
+                              </div>
+                              <div className="flex-1"><TextAreaField label="ALL INFO" value={activeVessel.remark} disabled={!isVesselUnlocked} onChange={(v) => updateActiveVessel({ remark: String(v).toUpperCase() })} /></div>
+                          </div>
+                      </div>
+
+                      {/* --- KHU VỰC AI VISION --- */}
+                      {activeVessel.type !== 'barge' && (
+                          <div className="md:col-span-3 mt-2 pt-6 border-t border-slate-200">
+                              <h4 className="text-sm font-black text-[#002D54] mb-4 italic tracking-widest flex items-center gap-2 uppercase"><Zap size={18} className="text-amber-500 fill-amber-500/20"/> Phân tích ảnh tàu & Định vị Cabin (AI Vision)</h4>
+                              <div className="bg-slate-50 p-6 rounded-[32px] border border-slate-200 flex flex-col md:flex-row gap-6 items-start shadow-inner">
+                                  <div className="flex flex-col gap-4 w-full md:w-1/3 flex-shrink-0">
+                                      <p className="text-[11px] font-bold text-slate-500 leading-relaxed normal-case">Tải lên hình ảnh tàu. Hệ thống tự động <b>Nén Ảnh</b>. Có thể dùng AI để đo khoảng cách Mũi-Cabin dựa vào LOA.</p>
+                                      <input type="file" accept="image/*" ref={aiImageInputRef} className="hidden" onChange={handleAiImageUpload} />
+                                      <button onClick={() => aiImageInputRef.current?.click()} disabled={aiLoading || !isVesselUnlocked} className="py-4 px-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-black text-xs rounded-2xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:grayscale uppercase tracking-widest">
+                                          {aiLoading ? <Activity size={18} className="animate-spin"/> : <ScanSearch size={18}/>}
+                                          {aiLoading ? 'ĐANG PHÂN TÍCH...' : 'CHỌN ẢNH ĐỂ PHÂN TÍCH'}
+                                      </button>
+                                      {!isVesselUnlocked && <p className="text-[9px] text-center text-red-500 font-bold uppercase mt-[-10px]">Cần mở khóa</p>}
+                                      {pendingAiDistance && (
+                                          <div className="bg-amber-100 border-2 border-amber-400 p-4 rounded-2xl flex flex-col gap-3 shadow-lg relative overflow-hidden">
+                                              <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                                              <p className="text-[11px] font-black text-amber-900 uppercase">AI đề xuất Mũi-Cabin: <span className="text-xl">{pendingAiDistance}m</span></p>
+                                              <div className="flex gap-2 mt-1">
+                                                  <button onClick={() => { setPendingAiDistance(null); setPendingAiImage(null); }} className="flex-1 bg-white text-slate-600 text-[10px] font-black py-2 rounded-lg border border-slate-300 hover:bg-slate-50 uppercase">Hủy Bỏ</button>
+                                                  <button onClick={confirmAndSaveAiResult} className="flex-[2] bg-emerald-500 text-white text-[10px] font-black py-2 rounded-lg shadow-md hover:bg-emerald-600 flex items-center justify-center gap-1 uppercase"><Check size={14}/> Đồng Ý Lưu</button>
+                                              </div>
+                                          </div>
+                                      )}
+                                      {aiSuccessMsg && <div className="text-emerald-700 text-[10px] font-black bg-emerald-100 p-3 rounded-xl border border-emerald-200 flex gap-2"><CheckCircle size={16} className="flex-shrink-0"/> <span className="normal-case">{aiSuccessMsg}</span></div>}
+                                      {aiError && <div className="text-red-700 text-[10px] font-black bg-red-100 p-3 rounded-xl border border-red-200 flex gap-2"><AlertCircle size={16} className="flex-shrink-0"/> <span className="normal-case">{aiError}</span></div>}
+                                  </div>
+                                  <div className="flex-1 flex gap-4 w-full">
+                                      <div className="flex-1 bg-white rounded-2xl border border-slate-200 p-2 min-h-[160px] max-h-[250px] shadow-sm flex flex-col items-center justify-center relative group overflow-hidden">
+                                          {pendingAiImage ? (
+                                              <><div className="absolute top-2 left-2 bg-amber-500 text-white text-[8px] font-black px-2 py-1 rounded z-10 shadow-md">ẢNH CHỜ LƯU</div><img src={pendingAiImage} alt="Pending" className="w-full h-full object-contain rounded-xl opacity-50 grayscale" /></>
+                                          ) : activeVesselImage ? (
+                                              <img src={activeVesselImage} alt="Stored" className="w-full h-full object-contain rounded-xl" />
+                                          ) : (
+                                              <div className="flex flex-col items-center gap-2 text-slate-300"><ImageIcon size={32} /><span className="text-[10px] font-black tracking-widest uppercase">CHƯA CÓ ẢNH TÀU</span></div>
+                                          )}
+                                      </div>
+                                      <div className="flex-[1.2] bg-white rounded-2xl border border-slate-200 p-5 min-h-[160px] max-h-[250px] overflow-y-auto custom-scrollbar shadow-sm relative">
+                                          <p className="text-[10px] font-black text-slate-400 mb-3 tracking-[0.2em] uppercase sticky top-0 bg-white/90 backdrop-blur pb-2 z-10 border-b border-slate-100">NHẬT KÝ SUY LUẬN TỪ AI:</p>
+                                          {aiResultText ? <div className="text-xs text-slate-700 font-bold whitespace-pre-wrap normal-case leading-loose">{aiResultText}</div> : <div className="h-full flex flex-col items-center justify-center text-slate-300 italic text-xs gap-3 mt-[-20px]"><ScanSearch size={32} className="opacity-20" /><span>Khu vực trả kết quả của AI.</span></div>}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                      )}
+                      
+                      {/* --- LỊCH SỬ CÁC CHUYẾN --- */}
+                      <div className="md:col-span-3 mt-6 pt-6 border-t border-slate-200">
+                          <h4 className="text-sm font-black text-[#002D54] mb-4 italic tracking-widest flex items-center gap-2 uppercase"><History size={18} className="text-blue-500"/> Lịch sử các chuyến (Voyages)</h4>
+                          {activeVesselVoyages.length > 0 ? (
+                              <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-inner">
+                                  <table className="w-full text-left bg-white text-xs">
+                                      <thead className="bg-slate-50 border-b border-slate-200"><tr className="text-slate-500 uppercase tracking-widest font-black"><th className="p-3">Chuyến</th><th className="p-3">Hướng Cập</th><th className="p-3">ETA</th><th className="p-3">Mạn Cập</th><th className="p-3">Vị trí</th><th className="p-3 text-right">Ngày lưu hệ thống</th></tr></thead>
+                                      <tbody className="divide-y divide-slate-100 font-bold text-slate-700">
+                                          {activeVesselVoyages.map(voy => (
+                                              <tr key={voy.id} className="hover:bg-blue-50 transition-colors">
+                                                  <td className="p-3 text-blue-600 tracking-wider text-sm">{voy.voyage}</td><td className="p-3">{voy.direction || '-'}</td><td className="p-3 text-emerald-700">{voy.eta ? new Date(voy.eta).toLocaleString('vi-VN') : '-'}</td><td className="p-3">{voy.side || '-'}</td><td className="p-3">{Math.round(voy.bowPos)}m - {Math.round(voy.sternPos)}m</td><td className="p-3 text-slate-400 text-right">{new Date(voy.savedAt).toLocaleString('vi-VN')}</td>
+                                              </tr>
+                                          ))}
+                                      </tbody>
+                                  </table>
+                              </div>
+                          ) : (
+                              <div className="bg-slate-50 p-6 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-slate-400 text-xs font-bold gap-2"><History size={24} className="opacity-50" /><p>Chưa có dữ liệu chuyến nào.</p></div>
+                          )}
+                      </div>
+
+                  </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'summary' && activeVessel && !isPrintMode && (
+            <div className="h-full overflow-y-auto no-scrollbar animate-in slide-in-from-bottom-6 duration-400">
+              <div className="bg-white p-16 rounded-[60px] border border-slate-200 shadow-2xl space-y-10 min-h-full max-w-6xl mx-auto mt-4 uppercase">
+                  <div className="flex justify-between items-start border-b-2 border-slate-50 pb-8">
+                      <div><h2 className="text-4xl font-black text-[#002D54] tracking-tighter italic leading-none">Báo cáo Hoạt động<br/><span className="text-blue-600">{String(activeVessel.name || 'UNKNOWN').toUpperCase()}</span></h2></div>
+                      <div className="text-right">
+                           <div className="bg-slate-900 text-white px-5 py-2 rounded-xl font-black text-[8px] tracking-widest mb-3 italic shadow-xl">Đã xác minh thông số</div>
+                           <p className="text-2xl font-black text-slate-800 italic leading-none">{new Date().toLocaleDateString('vi-VN')}</p>
+                      </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-8">
+                      <div className="space-y-2 bg-slate-50 p-10 rounded-[40px] border border-slate-100">
+                          <SummaryRow label="Tàu / Sà lan" value={`${activeVessel.name || ''} / ${activeVessel.voyage || ''}`.toUpperCase()} color="blue" />
+                          <SummaryRow label="Dự kiến cập (ETA)" value={activeVessel.eta ? new Date(activeVessel.eta).toLocaleString('vi-VN') : 'TBU'} color="blue" />
+                          <SummaryRow label="Dự kiến rời (ETD)" value={activeVessel.etd ? new Date(activeVessel.etd).toLocaleString('vi-VN') : 'TBU'} color="blue" />
+                          {activeVessel.type === 'vessel' && (
+                              <SummaryRow label={`Khoảng Buộc Dây (${Number(mooringPercent)}%)`} value={`${getMooringSpace(activeVessel, mooringPercent)}m`} color="emerald" />
+                          )}
+                      </div>
+                      <div className="space-y-2 bg-slate-50 p-10 rounded-[40px] border border-slate-100">
+                          <SummaryRow label="Cọc Mũi (Bow)" value={bow?.id !== '-' ? `Cọc ${bow.id} (${bow.pos}m)` : 'Ngoài bến'} color="purple" />
+                          <SummaryRow label="Cọc Lái (Stern)" value={stern?.id !== '-' ? `Cọc ${stern.id} (${stern.pos}m)` : 'Ngoài bến'} color="purple" />
+                          {activeVessel.type !== 'barge' && (
+                              <SummaryRow label="Vị trí Cabin" value={`${Math.round(activeVessel.cabinPos||0)}m`} color="purple" />
+                          )}
+                      </div>
+                      <div className="space-y-2 bg-slate-50 p-10 rounded-[40px] border border-slate-100">
+                          <SummaryRow label="Tổng Sản Lượng" value={`${Number(activeVessel.dis||0) + Number(activeVessel.load||0)} Moves`} color="emerald" />
+                          <SummaryRow label="Hướng Cập Cầu" value={String(activeVessel.direction || '').toUpperCase()} color="amber" />
+                      </div>
+                  </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'history' && !isPrintMode && (
+            <div className="h-full flex flex-col animate-in fade-in duration-400 max-w-6xl mx-auto w-full mt-4">
+              <div className="bg-white p-10 rounded-[40px] border border-slate-200 shadow-xl flex-1 flex flex-col overflow-hidden uppercase">
+                  <div className="flex items-center gap-5 mb-10">
+                      <div className="p-3 bg-slate-900 rounded-xl text-white shadow-xl shadow-slate-100"><History size={24} /></div>
+                      <h2 className="font-black text-2xl text-slate-900 tracking-tighter italic">Lưu trữ Kế hoạch Bến</h2>
+                  </div>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-4">
+                      <table className="w-full text-left border-separate border-spacing-y-5">
+                          <thead>
+                              <tr className="text-[10px] font-black text-slate-400 tracking-[0.4em] px-10">
+                                  <th className="px-10 py-2">Chi tiết Kế hoạch</th>
+                                  <th className="px-10 py-2 text-center w-48">Thao tác</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              {historyPlans.map(plan => (
+                                  <tr key={plan.id} className="bg-slate-50 hover:bg-white hover:shadow-xl transition-all duration-500 rounded-[30px] border border-transparent hover:border-blue-50 group">
+                                      <td className="px-10 py-6 rounded-l-[30px]">
+                                          <p className="font-black text-slate-900 text-lg tracking-tighter italic truncate">BẢN LƯU: {new Date(plan.updatedAt).toLocaleString('vi-VN')}</p>
+                                          <p className="text-[10px] font-bold text-blue-600 mt-1 tracking-widest italic uppercase">Số phương tiện: {plan.vessels?.length || 1} | Người tạo: {String(plan.updatedBy || '').slice(0,8)}</p>
+                                      </td>
+                                      <td className="px-10 py-6 rounded-r-[30px] text-center">
+                                          <div className="flex items-center justify-center gap-4">
+                                              <button onClick={() => { const vs = plan.vessels || [plan.vessel]; setVessels(vs); setActiveVesselId(vs[0].id); setQcTasks(plan.qcs || qcTasks); syncToCloud(vs, plan.qcs); setActiveTab('visual'); }} className="p-3 bg-blue-600 text-white rounded-xl shadow-lg active:scale-90"><Download size={16} /></button>
+                                              <button onClick={() => deleteFromHistory(plan.id)} className="p-3 bg-red-50 text-red-500 rounded-xl active:scale-90 hover:bg-red-500 hover:text-white transition-colors"><Trash2 size={16} /></button>
+                                          </div>
+                                      </td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* MODAL CƠ SỞ DỮ LIỆU & THÊM MỚI */}
+      {showVesselModal && !isPrintMode && (
+          <div className="absolute inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
+              <div className="bg-white w-[600px] max-h-[85%] rounded-[2rem] shadow-2xl flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 uppercase">
+                  <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 relative overflow-hidden flex-shrink-0">
+                      <div className="absolute -right-4 -top-4 text-blue-500/10 pointer-events-none"><Database size={100} /></div>
+                      <div className="relative z-10">
+                          <h3 className="text-xl font-black text-[#002D54] italic">{showNewVesselForm ? 'TẠO TÀU MỚI' : 'CƠ SỞ DỮ LIỆU TÀU'}</h3>
+                          {!showNewVesselForm && <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Trích xuất từ Master File ({safeMasterVessels.length} Tàu)</p>}
+                      </div>
+                      {!showNewVesselForm && (
+                          <div className="flex gap-3 relative z-10">
+                              <button onClick={handleExportExcel} className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-xl font-black text-[10px] tracking-widest uppercase transition-colors shadow-sm"><Download size={16} /> XUẤT EXCEL</button>
+                              <input type="file" accept=".csv, .xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                              <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 rounded-xl font-black text-[10px] tracking-widest uppercase transition-colors shadow-sm"><UploadCloud size={16} /> NHẬP CSV/EXCEL</button>
+                              <button onClick={() => setShowVesselModal(false)} className="p-2 bg-slate-200 hover:bg-slate-300 rounded-full text-slate-600 transition-colors"><X size={16}/></button>
+                          </div>
+                      )}
+                  </div>
+
+                  {showNewVesselForm ? (
+                      <div className="p-6 flex flex-col gap-5 overflow-y-auto custom-scrollbar">
+                          {formError && <div className="text-red-600 text-xs font-black bg-red-50 border border-red-200 p-3 rounded-xl flex items-center gap-2"><AlertCircle size={14}/>{formError}</div>}
+                          
+                          <div className="flex flex-col gap-1.5">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">TÊN TÀU (*)</label>
+                              <input type="text" value={newVesselData.name} onChange={e => setNewVesselData({...newVesselData, name: e.target.value.toUpperCase()})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-[#002D54] outline-none focus:ring-2 focus:ring-blue-500 uppercase shadow-inner" placeholder="NHẬP TÊN TÀU..." />
+                          </div>
+
+                          <div className="flex gap-5">
+                              <div className="flex flex-col gap-1.5 flex-1">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">LOA (m) (*)</label>
+                                  <input type="number" value={newVesselData.loa} onChange={e => setNewVesselData({...newVesselData, loa: e.target.value ? parseInt(e.target.value) : ''})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-[#002D54] outline-none focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="Vd: 200" />
+                              </div>
+                              <div className="flex flex-col gap-1.5 flex-1">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">MẠN CẬP (*)</label>
+                                  <div className="flex gap-2">
+                                      <button onClick={() => setNewVesselData({...newVesselData, side: 'SB'})} className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${newVesselData.side === 'SB' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>SB (PHẢI)</button>
+                                      <button onClick={() => setNewVesselData({...newVesselData, side: 'PS'})} className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${newVesselData.side === 'PS' ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>PS (TRÁI)</button>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <div className="flex gap-5">
+                              <div className="flex flex-col gap-1.5 flex-1">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CẬP DỰ KIẾN (ETA)</label>
+                                  <input type="datetime-local" value={newVesselData.eta} onChange={e => setNewVesselData({...newVesselData, eta: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-[#002D54] outline-none focus:ring-2 focus:ring-blue-500 uppercase shadow-inner" />
+                              </div>
+                              <div className="flex flex-col gap-1.5 flex-1">
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">RỜI DỰ KIẾN (ETD)</label>
+                                  <input type="datetime-local" value={newVesselData.etd} onChange={e => setNewVesselData({...newVesselData, etd: e.target.value})} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-[#002D54] outline-none focus:ring-2 focus:ring-blue-500 uppercase shadow-inner" />
+                              </div>
+                          </div>
+
+                          <div className="flex gap-3 mt-4 pt-6 border-t border-slate-100">
+                              <button onClick={() => setShowNewVesselForm(false)} className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-black text-xs rounded-xl hover:bg-slate-200 uppercase tracking-widest transition-colors shadow-sm">QUAY LẠI</button>
+                              <button onClick={handleCreateNewVessel} className="flex-[2] py-3.5 bg-[#002D54] text-white font-black text-xs rounded-xl hover:bg-[#00407a] uppercase tracking-widest shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-2"><Plus size={16}/> XÁC NHẬN THÊM</button>
+                          </div>
+                      </div>
+                  ) : (
+                      <>
+                          {uploadMsg && (
+                              <div className={`px-6 py-3 text-xs font-black tracking-widest flex items-center gap-2 flex-shrink-0 ${uploadMsg.includes('Lỗi') || uploadMsg.includes('LỖI') ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                                  {uploadMsg.includes('Lỗi') || uploadMsg.includes('LỖI') ? <AlertCircle size={14} /> : <CheckCircle size={14} />} {String(uploadMsg)}
+                              </div>
+                          )}
+
+                          <div className="p-4 border-b border-slate-100 bg-white flex-shrink-0">
+                              <div className="relative">
+                                  <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                                  <input autoFocus type="text" placeholder="TÌM KIẾM TÊN TÀU (GỢI Ý GẦN GIỐNG)..." value={searchQuery || ''} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-slate-100 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-shadow shadow-inner uppercase" />
+                              </div>
+                          </div>
+                          
+                          <div className="flex-1 overflow-y-auto custom-scrollbar p-3">
+                              {filteredVessels.length > 0 ? (
+                                  <>
+                                      {searchQuery && !filteredVessels.some(v => String(v.name).toUpperCase() === searchQuery.trim().toUpperCase()) && (
+                                          <button onClick={() => triggerNewVesselForm(searchQuery)} className="w-full text-left p-4 bg-emerald-50 hover:bg-emerald-100 rounded-xl transition-all border border-emerald-200 group flex items-center justify-between mb-3 shadow-sm">
+                                              <div>
+                                                  <h4 className="text-sm font-black text-emerald-800 uppercase flex items-center gap-2"><Plus size={16}/> TẠO MỚI TÀU: "{searchQuery.toUpperCase()}"</h4>
+                                                  <p className="text-[10px] font-bold text-emerald-600 mt-1 uppercase tracking-widest">Không tìm thấy tàu khớp hoàn toàn. Bấm để tạo mới.</p>
+                                              </div>
+                                              <ArrowRight size={18} className="text-emerald-600 transform group-hover:translate-x-1 transition-transform" />
+                                          </button>
+                                      )}
+
+                                      {filteredVessels.map((v, i) => (
+                                          <button key={`master-db-vessel-${i}`} onClick={() => addVesselFromDB(v)} className="w-full text-left p-4 hover:bg-blue-50 rounded-xl transition-all border border-transparent hover:border-blue-200 group flex items-center justify-between mb-1">
+                                              <div>
+                                                  <h4 className="text-sm font-black text-slate-800 uppercase">{String(v.name || 'UNKNOWN')}</h4>
+                                                  <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest">
+                                                      LOA: <span className="text-blue-600">{Number(v.loa || 200)}m</span> 
+                                                      {v.twistlock ? ` • ${String(v.twistlock).slice(0,25)}${String(v.twistlock).length > 25 ? '...' : ''}` : ''}
+                                                  </p>
+                                              </div>
+                                              <Plus size={18} className="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:scale-125" />
+                                          </button>
+                                      ))}
+                                  </>
+                              ) : (
+                                  <div className="p-10 flex flex-col items-center justify-center text-slate-500 gap-4 text-center">
+                                      <Database size={48} className="text-blue-300 mb-2" />
+                                      <h4 className="text-lg font-black text-[#002D54]">Không tìm thấy tàu phù hợp!</h4>
+                                      {searchQuery ? (
+                                          <button onClick={() => triggerNewVesselForm(searchQuery)} className="mt-2 py-3 px-6 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg active:scale-95 flex items-center gap-2">
+                                              <Plus size={16}/> TẠO MỚI "{searchQuery.toUpperCase()}"
+                                          </button>
+                                      ) : (
+                                          <p className="text-sm font-bold">Hãy bấm nút <b>"NHẬP CSV/EXCEL"</b> màu xanh lá ở góc trên bên phải.</p>
+                                      )}
+                                  </div>
+                              )}
+                          </div>
+                          <div className="p-5 border-t border-slate-100 bg-slate-50 flex-shrink-0">
+                              <button onClick={() => triggerNewVesselForm('')} className="w-full py-3.5 bg-[#002D54] hover:bg-[#00407a] text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] transition-all shadow-lg active:scale-[0.98]">
+                                  + THÊM TÀU TÙY CHỈNH MỚI
+                              </button>
+                          </div>
+                      </>
+                  )}
+              </div>
+          </div>
+      )}
+
+      {/* MODAL CẤU HÌNH XUẤT PDF */}
+      {showPdfModal && !isPrintMode && (
+          <div className="absolute inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center pointer-events-auto">
+              <div className="bg-white w-[420px] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+                  <div className="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                      <h3 className="font-black text-[#002D54] uppercase tracking-widest flex items-center gap-2 text-sm"><Printer size={18} className="text-emerald-600"/> Tùy chọn Xuất PDF</h3>
+                      <button onClick={() => setShowPdfModal(false)} className="text-slate-400 hover:text-red-500 bg-slate-200 hover:bg-red-50 p-1.5 rounded-full transition-colors"><X size={16}/></button>
+                  </div>
+                  <div className="p-6 flex flex-col gap-4">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 border-b border-slate-100 pb-2">Chọn các thành phần muốn hiển thị trong bản PDF:</p>
+                      
+                      <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-3 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors">
+                          <input type="checkbox" checked={pdfConfig.showVesselLabels} onChange={e => setPdfConfig({...pdfConfig, showVesselLabels: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"/>
+                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wide group-hover:text-blue-600">Mốc tọa độ Tàu (Mũi/Lái/Cabin)</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-3 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors">
+                          <input type="checkbox" checked={pdfConfig.showBargeLabels} onChange={e => setPdfConfig({...pdfConfig, showBargeLabels: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"/>
+                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wide group-hover:text-blue-600">Mốc tọa độ Sà Lan (Mũi/Lái)</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-3 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors">
+                          <input type="checkbox" checked={pdfConfig.showQcRanges} onChange={e => setPdfConfig({...pdfConfig, showQcRanges: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"/>
+                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wide group-hover:text-blue-600">Tầm di chuyển giới hạn của Cẩu</span>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer group bg-slate-50 p-3 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors">
+                          <input type="checkbox" checked={pdfConfig.showMooringLines} onChange={e => setPdfConfig({...pdfConfig, showMooringLines: e.target.checked})} className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"/>
+                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wide group-hover:text-blue-600">Mô phỏng đường cáp Dây Neo</span>
+                      </label>
+                      <label className="flex items-center justify-between group bg-slate-50 p-3 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors mt-2">
+                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wide group-hover:text-blue-600">Tỷ lệ in (Scale %):</span>
+                          <input type="number" value={pdfConfig.scale} onChange={e => setPdfConfig({...pdfConfig, scale: parseInt(e.target.value) || 100})} className="w-16 bg-white border border-slate-300 rounded px-2 py-1 text-center text-xs font-black text-blue-600 outline-none" min="50" max="200" />
+                      </label>
+                  </div>
+                  <div className="p-4 bg-white border-t border-slate-100 flex gap-3">
+                      <button onClick={() => setShowPdfModal(false)} className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-black text-[10px] rounded-xl hover:bg-slate-200 uppercase tracking-widest transition-colors shadow-sm">HỦY BỎ</button>
+                      <button onClick={executePdfExport} className="flex-[2] py-3.5 bg-emerald-600 text-white font-black text-[10px] rounded-xl hover:bg-emerald-700 uppercase tracking-widest shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"><Download size={16}/> TIẾN HÀNH XUẤT PDF</button>
+                  </div>
+              </div>
+          </div>
+      )}
+      
+      {/* GLOBAL TOAST NOTIFICATION */}
+      {toastMsg && (
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl font-black text-xs uppercase tracking-widest animate-in fade-in slide-in-from-bottom-4 flex items-center gap-2 border border-emerald-400">
+            <CheckCircle size={16} /> {toastMsg}
+        </div>
+      )}
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700;900&display=swap');
+        * { font-family: 'Montserrat', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; border: 2px solid #fff; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+        input[type=range] { -webkit-appearance: none; background: transparent; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #3b82f6; cursor: pointer; margin-top: -5px; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; cursor: pointer; background: #e2e8f0; border-radius: 4px; }
+        
+        @media print {
+            @page { size: landscape; margin: 10mm; }
+            body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; background: white !important; }
+        }
+      `}} />
+    </div>
+  );
+};
+
+export default App;

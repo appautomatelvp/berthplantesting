@@ -1,0 +1,1390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Data Viewer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS (xlsx.js) for Excel file reading --><script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js for data visualization --><script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #2d3748; }
+        ::-webkit-scrollbar-thumb { background: #4a5568; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #718096; }
+        .table-container {
+            max-height: 70vh;
+            overflow: auto;
+            width: 100%;
+        }
+        th, td {
+            padding: 6px 8px;
+            white-space: nowrap;
+            text-align: center;
+            border: 1px solid #374151;
+        }
+        th, button {
+            text-transform: uppercase;
+        }
+        .table-wrapper table { font-size: 12px; }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
+            border-radius: 50%; width: 20px; height: 20px;
+            animation: spin 1s linear infinite; display: inline-block;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .sortable-header { cursor: pointer; user-select: none; position: relative; }
+        .sortable-header:hover { background-color: #4a5568; }
+        .sort-icon { display: inline-block; margin-left: 5px; opacity: 0.6; min-width: 10px; }
+        .sortable-header.asc .sort-icon::after { content: '▲'; }
+        .sortable-header.desc .sort-icon::after { content: '▼'; }
+
+        /* Tab styles */
+        .tab-button {
+            padding: 0.75rem 1.25rem;
+            font-weight: 600;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+        .tab-button.active {
+            background-color: #4A5568; /* bg-gray-600 */
+            color: #E2E8F0; /* text-gray-200 */
+            border-color: #2563EB; /* border-blue-600 */
+        }
+        .tab-button:not(.active) {
+            background-color: #2D3748; /* bg-gray-800 */
+            color: #A0AEC0; /* text-gray-400 */
+        }
+        .tab-button:not(.active):hover {
+            background-color: #4A5568; /* bg-gray-700 */
+        }
+        .tab-content {
+            display: none; /* Bị ẩn theo mặc định */
+        }
+        .tab-content.active {
+            display: block; /* Chỉ hiển thị tab đang active */
+        }
+
+        /* Container ship background for chart */
+        #chartContainer {
+            position: relative;
+            min-height: 300px; /* Đảm bảo đủ không gian */
+        }
+
+        #shipBackground {
+            position: absolute;
+            /* THAY ĐỔI: Chuyển sang bottom: 0 */
+            top: auto;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            /* THAY ĐỔI: Giảm chiều cao để nó bắt đầu từ trục X */
+            height: 75%; 
+            z-index: 0; /* Đặt dưới biểu đồ */
+            opacity: 0.2; /* TĂNG ĐỘ ĐẬM */
+            
+            /* THAY THẾ SVG: Đổi màu sang ĐỎ ĐẬM HƠN (#DC2626) VÀ ĐIỀU CHỈNH PATH ĐỂ CHẠM ĐÁY */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 200"><path fill="%23DC2626" d="M20 200 H 800 L 980 175 V 145 L 800 170 H 20 V 130 H 150 V 170 H 20 V 200 Z" /></svg>');
+            
+            background-repeat: no-repeat;
+            /* THAY ĐỔI: Căn lề dưới cùng */
+            background-position: center bottom;
+            /* THAY ĐỔI: Lấp đầy chiều cao mới */
+            background-size: 115% 100%;
+            pointer-events: none; /* Cho phép tương tác với biểu đồ bên trên */
+            transition: transform 0.3s ease-in-out; /* Thêm hiệu ứng lật mượt mà */
+            transform: scaleX(1); /* Mặc định (Mũi -> Lái) */
+        }
+
+        /* MỚI: Thêm min-width cho canvas để nó rộng hơn */
+        #analysisChart {
+            min-width: 700px; /* Đặt chiều rộng tối thiểu cho biểu đồ */
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 antialiased">
+    <div class="container mx-auto p-4 md:p-6">
+        <header class="text-center mb-6 relative">
+            <h1 class="text-3xl md:text-4xl font-bold text-white uppercase">ADVANCED DATA VIEWER</h1>
+            <p class="text-gray-400 mt-2">DÁN HOẶC TẢI DỮ LIỆU ĐỂ XEM CHI TIẾT VÀ PHÂN TÍCH</p>
+        </header>
+
+        <main>
+            <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
+                <textarea id="dataInput" class="w-full h-40 p-4 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200" placeholder="DÁN DỮ LIỆU CỦA BẠN VÀO ĐÂY... (SAO CHÉP TRỰC TIẾP TỪ EXCEL)"></textarea>
+                
+                <div class="flex flex-col sm:flex-row items-center justify-between mt-4 gap-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button id="processBtn" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-md whitespace-nowrap">XỬ LÝ DỮ LIỆU DÁN</button>
+                        <label for="fileUpload" class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-md cursor-pointer whitespace-nowrap text-center">
+                            TẢI FILE EXCEL
+                        </label>
+                        <input type="file" id="fileUpload" class="hidden" accept=".xlsx, .xls, .csv">
+                        <button id="clearBtn" class="w-full sm:w-auto bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition duration-200 shadow-md">XÓA</button>
+                    </div>
+                    <div id="status" class="text-gray-400 text-sm flex-grow text-center sm:text-left"></div>
+                </div>
+            </div>
+
+            <!-- Tab Navigation --><nav class="flex justify-center items-center gap-4 my-8">
+                <button id="tabBtnDetails" class="tab-button active" data-tab="details">DỮ LIỆU CHI TIẾT</button>
+                <button id="tabBtnAnalysis" class="tab-button" data-tab="analysis">PHÂN TÍCH CARRIER</button>
+            </nav>
+
+            <div class="mt-8">
+                <!-- Tab Content: Dữ Liệu Chi Tiết --><div id="detailsTabContent" class="tab-content active">
+                    <h2 class="text-2xl font-bold text-white mb-4 uppercase text-center">DỮ LIỆU CHI TIẾT</h2>
+                    
+                    <!-- NÂNG CẤP: Bộ lọc cho Tab Chi Tiết --><div class="bg-gray-800 p-4 rounded-xl shadow-lg mb-6 flex flex-col md:flex-row gap-4">
+                        <div class="flex-grow">
+                            <label for="detailSearchInput" class="block text-sm font-medium text-gray-300 mb-2">TÌM KIẾM NHANH:</label>
+                            <input type="text" id="detailSearchInput" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500" placeholder="Tìm trong tất cả các cột...">
+                        </div>
+                        <div class="w-full md:w-1/3">
+                            <label for="detailCategorySelect" class="block text-sm font-medium text-gray-300 mb-2">LỌC THEO CATEGORY (I):</label>
+                            <select id="detailCategorySelect" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                <option value="">-- TẤT CẢ CATEGORY --</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="resultContainer" class="table-wrapper"></div>
+                </div>
+
+                <!-- Tab Content: Phân Tích Carrier --><div id="analysisTabContent" class="tab-content">
+                    <h2 class="text-2xl font-bold text-white mb-4 uppercase text-center">PHÂN TÍCH CARRIER</h2>
+                    
+                    <div class="bg-gray-800 p-6 rounded-xl shadow-lg max-w-4xl mx-auto">
+                        <!-- Bộ lọc (controls) --><div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4"> <!-- THAY ĐỔI: Tăng số cột lên 4 --><!-- Carrier Selection --><div class="md:col-span-1">
+                                <label for="carrierSelect" class="block text-sm font-medium text-gray-300 mb-2">CHỌN CARRIER:</label>
+                                <select id="carrierSelect" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500">
+                                    <option value="">-- XỬ LÝ DỮ LIỆU --</option>
+                                </select>
+                            </div>
+
+                            <!-- Lọc Trạng Thái Vị Trí --><div class="md:col-span-1">
+                                <label class="block text-sm font-medium text-gray-300 mb-2">TRẠNG THÁI VỊ TRÍ:</label>
+                                <div class="flex items-center space-x-4 p-3 bg-gray-700 rounded-lg h-[42px]">
+                                    <div class="flex items-center">
+                                        <input id="positionCurrent" name="positionState" type="radio" value="current" checked class="h-4 w-4 text-blue-600 bg-gray-900 border-gray-600 focus:ring-blue-500">
+                                        <label for="positionCurrent" class="ml-2 block text-sm font-medium text-gray-200 uppercase">HIỆN TẠI</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input id="positionPlanned" name="positionState" type="radio" value="planned" class="h-4 w-4 text-blue-600 bg-gray-900 border-gray-600 focus:ring-blue-500">
+                                        <label for="positionPlanned" class="ml-2 block text-sm font-medium text-gray-200 uppercase">TƯƠNG LAI</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- MỚI: Lọc Category (Multi-select Dropdown) --><div class="md:col-span-1 relative">
+                                <label for="analysisCategoryButton" class="block text-sm font-medium text-gray-300 mb-2">LỌC CATEGORY:</label>
+                                <button id="analysisCategoryButton" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 h-[42px] text-left flex justify-between items-center">
+                                    <span id="analysisCategoryButtonText" class="truncate">-- CHỌN CATEGORY --</span>
+                                    <svg class="w-4 h-4 ml-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <div id="analysisCategoryChecklist" class="absolute z-20 w-full mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden">
+                                    <!-- Checkboxes sẽ được điền bằng JS -->
+                                </div>
+                            </div>
+
+                            <!-- MỚI: Sắp xếp biểu đồ Bay --><div class="md:col-span-1">
+                                <label class="block text-sm font-medium text-gray-300 mb-2">SẮP XẾP BIỂU ĐỒ BAY:</label>
+                                <div class="flex items-center space-x-4 p-3 bg-gray-700 rounded-lg h-[42px]">
+                                    <div class="flex items-center">
+                                        <input id="sortBySB" name="baySortOrder" type="radio" value="sb" checked class="h-4 w-4 text-blue-600 bg-gray-900 border-gray-600 focus:ring-blue-500">
+                                        <!-- THAY ĐỔI NHÃN --><label for="sortBySB" class="ml-2 block text-sm font-medium text-gray-200 uppercase">SB</label>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input id="sortByPS" name="baySortOrder" type="radio" value="ps" class="h-4 w-4 text-blue-600 bg-gray-900 border-gray-600 focus:ring-blue-500">
+                                        <label for="sortByPS" class="ml-2 block text-sm font-medium text-gray-200 uppercase">PS</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Carrier Name Display --><div id="carrierNameDisplay" class="mb-6 p-4 bg-gray-700/50 rounded-lg min-h-[50px]">
+                            <!-- Tên Carrier sẽ hiển thị ở đây --></div>
+
+                        <!-- Analysis Result (Bố cục 1 cột) --><div class="grid grid-cols-1 gap-10">
+                            <!-- STOWAGE PLAN --><div>
+                                <h3 class="text-lg font-semibold text-white mb-3 uppercase">I. STOWAGE PLAN</h3>
+                                <div class="space-y-4">
+                                    <!-- SỐ LỚP CHẤT XẾP (SỐ TIER) --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <div class="flex flex-col sm:flex-row justify-between items-center mb-3">
+                                            <h4 class="font-semibold text-blue-300 uppercase">1. SỐ LỚP CHẤT XẾP (SỐ TIER)</h4>
+                                            <!-- MỚI: Lọc số lớp --><div class="w-full sm:w-auto mt-2 sm:mt-0">
+                                                <label for="layerFilterSelect" class="sr-only">Lọc theo số lớp</label>
+                                                <select id="layerFilterSelect" class="w-full sm:w-auto p-2 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 text-sm">
+                                                    <option value="0">HIỂN THỊ TẤT CẢ CÁC BAY (CÓ HẦM)</option>
+                                                    <option value="5">CHỈ HIỂN THỊ >= 5 LỚP</option>
+                                                    <option value="6">CHỈ HIỂN THỊ >= 6 LỚP</option>
+                                                    <option value="7">CHỈ HIỂN THỊ >= 7 LỚP</option>
+                                                    <option value="8">CHỈ HIỂN THỊ >= 8 LỚP</option>
+                                                    <option value="9">CHỈ HIỂN THỊ >= 9 LỚP</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div id="analysisStowageHighTier" class="mt-2 text-gray-400 font-mono text-sm min-h-[50px] mb-4">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                        <!-- BIỂU ĐỒ CHO HIGH TIER --><div id="chartContainer" class="p-4 bg-gray-800 rounded-lg min-h-[300px] relative overflow-x-auto">
+                                            <div id="shipBackground"></div> <!-- Hình nền con tàu --><canvas id="analysisChart" class="relative z-10"></canvas>
+                                        </div>
+                                    </div>
+                                    <!-- GẮN GÙ --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-blue-300 uppercase">2. GẮN GÙ</h4>
+                                        <div id="analysisStowageTwistlock" class="mt-2 text-gray-400 font-mono text-sm min-h-[50px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- ĐÓNG MỞ NẮP HẦM --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-blue-300 uppercase">3. ĐÓNG MỞ NẮP HẦM</h4>
+                                        <div id="analysisStowageHatch" class="mt-2 text-gray-400 font-mono text-sm min-h-[50px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- DUAL --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-blue-300 uppercase">4. DUAL</h4>
+                                        <div id="analysisStowageDual" class="mt-2 text-gray-400 font-mono text-sm min-h-[50px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- HÀNG HÓA --><div class="mt-8"> <!-- Thêm margin top để tách biệt rõ ràng --><h3 class="text-lg font-semibold text-white mb-3 uppercase">II. HÀNG HÓA</h3>
+                                <div class="space-y-4">
+                                    <!-- CONTAINER ĐẶC BIỆT --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-green-300 uppercase">1. CONTAINER ĐẶC BIỆT</h4>
+                                        <div id="analysisCargoSpecial" class="mt-2 text-gray-400 font-mono text-sm min-h-[30px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- CONTAINER NGUY HIỂM --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-green-300 uppercase">2. CONTAINER NGUY HIỂM</h4>
+                                        <div id="analysisCargoDg" class="mt-2 text-gray-400 font-mono text-sm min-h-[30px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- CONTAINER LẠNH --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-green-300 uppercase">3. CONTAINER LẠNH</h4>
+                                        <div id="analysisCargoReefer" class="mt-2 text-gray-400 font-mono text-sm min-h-[30px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- CONTAINER HÀNG --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-green-300 uppercase">4. CONTAINER HÀNG</h4>
+                                        <div id="analysisCargoFull" class="mt-2 text-gray-400 font-mono text-sm min-h-[30px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- CONTAINER RỖNG --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-green-300 uppercase">5. CONTAINER RỖNG</h4>
+                                        <div id="analysisCargoEmpty" class="mt-2 text-gray-400 font-mono text-sm min-h-[30px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- CHECK SEAL --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-green-300 uppercase">6. CHECK SEAL</h4>
+                                        <div id="analysisCargoSeal" class="mt-2 text-gray-400 font-mono text-sm min-h-[30px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                    <!-- CÂN CONTAINER --><div class="bg-gray-900 p-4 rounded-lg">
+                                        <h4 class="font-semibold text-green-300 uppercase">7. CÂN CONTAINER</h4>
+                                        <div id="analysisCargoVgm" class="mt-2 text-gray-400 font-mono text-sm min-h-[30px]">
+                                            <!-- NỘI DUNG PHÂN TÍCH SẼ HIỂN THỊ Ở ĐÂY... --></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script type="module">
+        // --- DOM Elements ---
+        const processBtn = document.getElementById('processBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const fileUploadInput = document.getElementById('fileUpload');
+        const dataInput = document.getElementById('dataInput');
+        const statusDiv = document.getElementById('status');
+        
+        // Details Tab
+        const resultContainer = document.getElementById('resultContainer');
+        const detailSearchInput = document.getElementById('detailSearchInput');
+        const detailCategorySelect = document.getElementById('detailCategorySelect');
+        
+        // Analysis Tab
+        const carrierSelect = document.getElementById('carrierSelect');
+        const carrierNameDisplay = document.getElementById('carrierNameDisplay');
+        const analysisStowageHighTierDisplay = document.getElementById('analysisStowageHighTier');
+        const positionCurrentRadio = document.getElementById('positionCurrent');
+        const positionPlannedRadio = document.getElementById('positionPlanned');
+        // THAY ĐỔI: const analysisCategorySelect = document.getElementById('analysisCategorySelect');
+        const analysisCategoryButton = document.getElementById('analysisCategoryButton');
+        const analysisCategoryButtonText = document.getElementById('analysisCategoryButtonText');
+        const analysisCategoryChecklist = document.getElementById('analysisCategoryChecklist');
+        const layerFilterSelect = document.getElementById('layerFilterSelect'); // MỚI: Lọc số lớp
+        const sortBySBRadio = document.getElementById('sortBySB'); // MỚI
+        const sortByPSRadio = document.getElementById('sortByPS'); // MỚI
+        const analysisChartCanvas = document.getElementById('analysisChart');
+        const shipBackground = document.getElementById('shipBackground'); // MỚI: Lấy DOM của nền tàu
+
+        // Tab Buttons
+        const tabBtnDetails = document.getElementById('tabBtnDetails');
+        const tabBtnAnalysis = document.getElementById('tabBtnAnalysis');
+        const detailsTabContent = document.getElementById('detailsTabContent');
+        const analysisTabContent = document.getElementById('analysisTabContent');
+        
+        // --- App State ---
+        let originalData = [];
+        let detailSortState = { key: 'A', order: 'asc' };
+        let detailFilters = { search: '', category: '' };
+        let carrierDictionary = new Map();
+        let allCategories = new Set();
+        let analysisSelectedCategories = new Set(); // MỚI: Dùng Set cho multi-select
+        let allBayDeckParents = new Set(); // MỚI: Lưu trữ tất cả các parent bay của tàu
+        let analysisChart = null;
+
+        // --- NÂNG CẤP: Cấu hình hóa Quy tắc ---
+        const ANALYSIS_RULES = {
+            NO_HATCH_TIER_BELOW: 70,
+            HATCH_TIER_ABOVE_OR_EQUAL: 72,
+        };
+
+        // --- Column Headers & Keys ---
+        const columnHeaders = [ 
+            'Inbound Carrier', 'Inbound Carrier Name', 'Outbound Carrier', 'Outbound Carrier Name', 
+            'Class', 'Current Position', 'Planned Position', 'Container No', 'Category', 
+            'Line', 'P.O.W', 'Vessel Bay/Deck', 'Vessel Tier', 'Vessel Slot' 
+        ];
+        const outputHeaderMap = new Map();
+        columnHeaders.forEach((header, index) => outputHeaderMap.set(String.fromCharCode(65 + index), header));
+        
+        // --- Event Listeners ---
+        processBtn.addEventListener('click', handleProcessPastedData);
+        clearBtn.addEventListener('click', handleClearData);
+        fileUploadInput.addEventListener('change', handleFileUpload);
+        
+        // Tab Listeners
+        tabBtnDetails.addEventListener('click', () => showTab('details'));
+        tabBtnAnalysis.addEventListener('click', () => showTab('analysis'));
+
+        // Details Tab Listeners
+        resultContainer.addEventListener('click', (e) => handleSort(e));
+        detailSearchInput.addEventListener('input', (e) => {
+            detailFilters.search = e.target.value.toLowerCase();
+            updateDisplay();
+        });
+        detailCategorySelect.addEventListener('change', (e) => {
+            detailFilters.category = e.target.value;
+            updateDisplay();
+        });
+
+        // --- MỚI: Event Listeners cho Category Multi-select ---
+        analysisCategoryButton.addEventListener('click', () => {
+            analysisCategoryChecklist.classList.toggle('hidden');
+        });
+
+        // Ẩn dropdown nếu click bên ngoài
+        document.addEventListener('click', (e) => {
+            if (!analysisCategoryButton.contains(e.target) && !analysisCategoryChecklist.contains(e.target)) {
+                analysisCategoryChecklist.classList.add('hidden');
+            }
+        });
+
+        // Xử lý Checkbox
+        analysisCategoryChecklist.addEventListener('change', (e) => {
+            if (e.target.classList.contains('category-select-all')) {
+                // CHỌN TẤT CẢ
+                document.querySelectorAll('.analysis-category-item').forEach(cb => {
+                    cb.checked = true;
+                    analysisSelectedCategories.add(cb.value);
+                });
+            } else if (e.target.classList.contains('category-select-none')) {
+                // BỎ CHỌN TẤT CẢ
+                document.querySelectorAll('.analysis-category-item').forEach(cb => {
+                    cb.checked = false;
+                    analysisSelectedCategories.delete(cb.value);
+                });
+            } else if (e.target.classList.contains('analysis-category-item')) {
+                // CHỌN MỤC CỤ THỂ
+                if (e.target.checked) {
+                    analysisSelectedCategories.add(e.target.value);
+                } else {
+                    analysisSelectedCategories.delete(e.target.value);
+                }
+            }
+            
+            // Cập nhật text và chạy lại phân tích
+            updateAnalysisCategoryButtonText();
+            handleCarrierAnalysis();
+        });
+
+
+        // Analysis Tab Listeners (tất cả đều trỏ về 1 hàm)
+        // THAY ĐỔI: Xóa analysisCategorySelect
+        [carrierSelect, positionCurrentRadio, positionPlannedRadio, sortBySBRadio, sortByPSRadio, layerFilterSelect].forEach(el => {
+            el.addEventListener('change', handleCarrierAnalysis);
+        });
+
+        // --- Core Functions ---
+        function handleClearData() {
+            dataInput.value = '';
+            originalData = [];
+            carrierDictionary.clear();
+            allCategories.clear();
+            allBayDeckParents.clear(); // MỚI: Xóa danh sách bay
+            
+            // Reset Details
+            detailFilters = { search: '', category: '' };
+            detailSearchInput.value = '';
+            
+            updateDisplay(); // Cập nhật (sẽ hiển thị "Không có dữ liệu")
+            
+            // Reset Analysis
+            clearAnalysisTab(true); // true = reset cả dropdowns
+            
+            showStatus('Đã xóa dữ liệu.', 'info');
+        }
+
+        function handleProcessPastedData() {
+            const rawData = dataInput.value.trim();
+            if (!rawData) { showStatus('Lỗi: Không có dữ liệu để xử lý.', 'error'); return; }
+            showStatus('Đang xử lý dữ liệu dán...', 'info', true);
+            setTimeout(() => {
+                const rows = rawData.split('\n').map(row => row.split('\t'));
+                processAndRenderData(rows);
+            }, 200);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            showStatus(`Đang đọc file ${file.name}...`, 'info', true);
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = e.target.result;
+                try {
+                    const workbook = XLSX.read(data, { type: 'binary' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                    const nonEmptyRows = rows.filter(row => Array.isArray(row) && row.some(cell => cell !== null && cell.toString().trim() !== ''));
+                    showStatus('Đang xử lý dữ liệu file...', 'info', true);
+                    setTimeout(() => {
+                        processAndRenderData(nonEmptyRows);
+                    }, 200);
+                } catch (error) {
+                    console.error("File parsing error:", error);
+                    showStatus('Lỗi: Không thể đọc hoặc phân tích file Excel.', 'error');
+                }
+            };
+            reader.onerror = function() {
+                 showStatus('Lỗi khi đọc file.', 'error');
+            };
+            reader.readAsBinaryString(file);
+            event.target.value = '';
+        }
+
+        function processAndRenderData(rows) {
+             showStatus('ĐANG XỬ LÝ...', 'info', true);
+            setTimeout(() => {
+                try {
+                    let data = rows.map(row => { 
+                        let obj = {}; 
+                        columnHeaders.forEach((header, i) => {
+                             obj[String.fromCharCode(65 + i)] = (row[i] || '').toString().trim();
+                        });
+                        return obj; 
+                    });
+
+                    originalData = data;
+                    
+                    // Xây dựng các bộ lọc
+                    buildFilterOptions(originalData);
+                    buildFullBayList(originalData); // MỚI: Xây dựng danh sách bay toàn bộ
+
+                    // Cập nhật tab Dữ liệu chi tiết
+                    detailSortState = { key: 'A', order: 'asc' };
+                    updateDisplay();
+                    
+                    // Reset tab Phân tích (chỉ reset kết quả, giữ dropdowns)
+                    clearAnalysisTab(false);
+                    
+                    showStatus(`XỬ LÝ THÀNH CÔNG ${originalData.length} DÒNG.`, 'success');
+                } catch (error) { 
+                    console.error('Processing Error:', error); 
+                    showStatus('Lỗi xử lý dữ liệu. Vui lòng kiểm tra định dạng file hoặc dữ liệu dán.', 'error'); 
+                }
+            }, 200);
+        }
+        
+        function buildFilterOptions(data) {
+            // Xóa dropdown cũ và dictionary
+            carrierSelect.innerHTML = '<option value="">-- CHỌN CARRIER --</option>'; 
+            detailCategorySelect.innerHTML = '<option value="">-- TẤT CẢ CATEGORY --</option>';
+            
+            // MỚI: Xây dựng multi-select category
+            analysisCategoryChecklist.innerHTML = '';
+            carrierDictionary.clear();
+            allCategories.clear();
+            analysisSelectedCategories.clear(); // Xóa Set
+            
+            // --- YÊU CẦU 3: ĐẾM SỐ LƯỢNG CONTAINER CHO MỖI CARRIER ---
+            const carrierCounts = new Map();
+            const carrierCodes = new Set();
+            
+            // --- NÂNG CẤP: THEO DÕI SỰ HIỆN DIỆN (INBOUND/OUTBOUND) ---
+            const carrierPresence = new Map();
+            
+            data.forEach(row => {
+                // Carrier (A, B, C, D)
+                const inCarrier = row['A'];
+                const inName = row['B'];
+                const outCarrier = row['C'];
+                const outName = row['D'];
+
+                // Dùng Set để xử lý trường hợp Inbound = Outbound
+                const uniqueCarriersInRow = new Set();
+                if (inCarrier) uniqueCarriersInRow.add(inCarrier);
+                if (outCarrier) uniqueCarriersInRow.add(outCarrier);
+
+                // Đếm container (mỗi hàng được đếm 1 lần cho mỗi carrier liên quan)
+                uniqueCarriersInRow.forEach(code => {
+                    carrierCounts.set(code, (carrierCounts.get(code) || 0) + 1);
+                });
+                
+                // Thu thập tên (như cũ)
+                if (inCarrier) {
+                    carrierCodes.add(inCarrier);
+                    if (!carrierDictionary.has(inCarrier)) carrierDictionary.set(inCarrier, { inName: new Set(), outName: new Set() });
+                    if (inName) carrierDictionary.get(inCarrier).inName.add(inName);
+                    
+                    // --- NÂNG CẤP: ĐÁNH DẤU LÀ CÓ INBOUND ---
+                    if (!carrierPresence.has(inCarrier)) carrierPresence.set(inCarrier, { hasInbound: false, hasOutbound: false });
+                    carrierPresence.get(inCarrier).hasInbound = true;
+                }
+                if (outCarrier) {
+                    carrierCodes.add(outCarrier);
+                    if (!carrierDictionary.has(outCarrier)) carrierDictionary.set(outCarrier, { inName: new Set(), outName: new Set() });
+                    if (outName) carrierDictionary.get(outCarrier).outName.add(outName);
+                    
+                    // --- NÂNG CẤP: ĐÁNH DẤU LÀ CÓ OUTBOUND ---
+                    if (!carrierPresence.has(outCarrier)) carrierPresence.set(outCarrier, { hasInbound: false, hasOutbound: false });
+                    carrierPresence.get(outCarrier).hasOutbound = true;
+                }
+                
+                // Category (I)
+                const category = row['I'];
+                if (category) {
+                    allCategories.add(category);
+                }
+            });
+
+            // 3. Sắp xếp và thêm vào dropdowns
+            const sortedCarriers = Array.from(carrierCodes).sort();
+            
+            // THAY ĐỔI LOGIC TẠO OPTION CHO CARRIER
+            sortedCarriers.forEach(code => {
+                // --- YÊU CẦU 3: LỌC CARRIER CÓ DƯỚI 100 CONTAINER ---
+                const count = carrierCounts.get(code) || 0;
+
+                // --- NÂNG CẤP: THAY THẾ LOGIC LỌC ---
+                const presence = carrierPresence.get(code) || { hasInbound: false, hasOutbound: false };
+                const isBoth = presence.hasInbound && presence.hasOutbound;
+                const isOneSided = (presence.hasInbound || presence.hasOutbound) && !isBoth;
+
+                if (isBoth) {
+                    // Luôn hiển thị (chắc chắn lấy)
+                } else if (isOneSided) {
+                    // Chỉ hiển thị nếu >= 250
+                    if (count < 250) return; // Ẩn
+                } else {
+                    // Không có (hoặc lỗi), ẩn
+                    return;
+                }
+                // --- KẾT THÚC NÂNG CẤP ---
+
+                const option = document.createElement('option');
+                option.value = code;
+                
+                const namesData = carrierDictionary.get(code);
+                let allNames = new Set();
+                if (namesData) {
+                    // Lấy tất cả tên Inbound và Outbound
+                    namesData.inName.forEach(name => allNames.add(name));
+                    namesData.outName.forEach(name => allNames.add(name));
+                }
+                
+                // Lọc bỏ các tên rỗng hoặc chỉ có khoảng trắng
+                const uniqueNames = Array.from(allNames).filter(name => name && name.trim() !== '');
+                
+                // --- YÊU CẦU 1: BỎ NGOẶC VUÔNG VÀ THÊM SỐ LƯỢNG ---
+                if (uniqueNames.length > 0) {
+                    // Hiển thị code và các tên duy nhất, ngăn cách bằng ' / '
+                    option.textContent = `${code} - ${uniqueNames.join(' / ')} (${count} conts)`;
+                } else {
+                    // Nếu không có tên, chỉ hiển thị code
+                    option.textContent = `${code} (${count} conts)`;
+                }
+                
+                carrierSelect.appendChild(option);
+            });
+            
+            const sortedCategories = Array.from(allCategories).sort();
+            
+            // --- MỚI: Xây dựng Analysis Category Checklist ---
+            let checklistHTML = `
+                <div class="p-2 border-b border-gray-600 space-y-2">
+                    <label class="flex items-center space-x-2 text-gray-200 cursor-pointer hover:bg-gray-600 p-1 rounded">
+                        <input type="checkbox" class="category-select-all w-4 h-4 text-blue-500 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
+                        <span class="text-sm font-medium">CHỌN TẤT CẢ</span>
+                    </label>
+                    <label class="flex items-center space-x-2 text-gray-200 cursor-pointer hover:bg-gray-600 p-1 rounded">
+                        <input type="checkbox" class="category-select-none w-4 h-4 text-blue-500 bg-gray-800 border-gray-600 rounded focus:ring-blue-500">
+                        <span class="text-sm font-medium">BỎ CHỌN TẤT CẢ</span>
+                    </label>
+                </div>
+                <div class="p-2 space-y-2">
+            `;
+            
+            sortedCategories.forEach(cat => {
+                // MẶC ĐỊNH: Chọn tất cả, trừ 'THROUGH'
+                const isChecked = (cat.toUpperCase() !== 'THROUGH');
+                if (isChecked) {
+                    analysisSelectedCategories.add(cat);
+                }
+                
+                checklistHTML += `
+                    <label class="flex items-center space-x-2 p-1 text-gray-200 cursor-pointer hover:bg-gray-600 rounded">
+                        <input type="checkbox" class="analysis-category-item w-4 h-4 text-blue-500 bg-gray-800 border-gray-600 rounded focus:ring-blue-500" value="${cat}" ${isChecked ? 'checked' : ''}>
+                        <span class="text-sm">${cat}</span>
+                    </label>
+                `;
+                
+                // Thêm vào dropdown của tab "Details"
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                detailCategorySelect.appendChild(option);
+            });
+            
+            checklistHTML += '</div>';
+            analysisCategoryChecklist.innerHTML = checklistHTML;
+            updateAnalysisCategoryButtonText(); // Cập nhật text nút
+        }
+        
+        // MỚI: Cập nhật text cho nút category
+        function updateAnalysisCategoryButtonText() {
+            const totalCategories = allCategories.size;
+            const selectedCount = analysisSelectedCategories.size;
+
+            if (selectedCount === 0) {
+                analysisCategoryButtonText.textContent = "-- KHÔNG CHỌN --";
+            } else if (selectedCount === totalCategories) {
+                analysisCategoryButtonText.textContent = "TẤT CẢ CATEGORIES";
+            } else if (selectedCount === (totalCategories - (allCategories.has('THROUGH') ? 1 : 0)) && !analysisSelectedCategories.has('THROUGH')) {
+                analysisCategoryButtonText.textContent = "TẤT CẢ (TRỪ THROUGH)";
+            } else if (selectedCount <= 3) {
+                analysisCategoryButtonText.textContent = Array.from(analysisSelectedCategories).join(', ');
+            } else {
+                analysisCategoryButtonText.textContent = `ĐÃ CHỌN ${selectedCount} LOẠI`;
+            }
+        }
+
+        // MỚI: Hàm quét toàn bộ dữ liệu để tìm tất cả các "parent bay"
+        function buildFullBayList(data) {
+            allBayDeckParents.clear();
+            const allHatchBays = new Set();
+            const allEvenHatchBays = new Set();
+
+            data.forEach(row => {
+                const bayDeck = row['L'];
+                const tier = row['M'];
+                const tierNum = parseInt(tier, 10);
+
+                // Chỉ quan tâm đến các hàng có tier >= 72 (có hầm)
+                if (tierNum >= ANALYSIS_RULES.HATCH_TIER_ABOVE_OR_EQUAL) {
+                    const bayNum = parseInt(bayDeck, 10);
+                    if (!isNaN(bayNum)) {
+                        // Chuẩn hóa tên bay (vd: "1" -> "01")
+                        const bayDeckPadded = bayDeck.padStart(2, '0');
+                        allHatchBays.add(bayDeckPadded);
+                        
+                        // Lưu lại các bay chẵn
+                        if (bayNum % 2 === 0) {
+                            allEvenHatchBays.add(bayNum);
+                        }
+                    }
+                }
+            });
+
+            // Sắp xếp các bay chẵn để tìm bay gần nhất
+            const sortedEvenBays = Array.from(allEvenHatchBays).sort((a, b) => a - b);
+            
+            // Từ tất cả các bay có hầm, tìm "parent bay" (bay nhóm) của chúng
+            for (const bay of allHatchBays) {
+                const parent = getBayParent(bay, allHatchBays, sortedEvenBays);
+                allBayDeckParents.add(parent);
+            }
+        }
+
+        function handleSort(event) {
+            const header = event.target.closest('.sortable-header');
+            if (!header) return;
+            const key = header.dataset.key;
+            
+            if (detailSortState.key === key) {
+                detailSortState.order = detailSortState.order === 'asc' ? 'desc' : 'asc';
+            } else {
+                detailSortState.key = key;
+                detailSortState.order = 'asc';
+            }
+            
+            updateDisplay();
+        }
+
+        // --- NÂNG CẤP: `updateDisplay` giờ đã tích hợp bộ lọc ---
+        function updateDisplay() {
+            let filteredData = [...originalData];
+            
+            // 1. Áp dụng bộ lọc Category
+            if (detailFilters.category) {
+                filteredData = filteredData.filter(row => row['I'] === detailFilters.category);
+            }
+            
+            // 2. Áp dụng bộ lọc Tìm kiếm
+            if (detailFilters.search) {
+                const search = detailFilters.search;
+                filteredData = filteredData.filter(row => 
+                    Object.values(row).some(val => val.toLowerCase().includes(search))
+                );
+            }
+
+            // 3. Sắp xếp
+            sortData(filteredData, detailSortState.key, detailSortState.order);
+            
+            // 4. Hiển thị
+            renderTable(filteredData, resultContainer, outputHeaderMap, detailSortState);
+        }
+
+        // --- Tab Specific Functions ---
+
+        function showTab(tabName) {
+            if (tabName === 'details') {
+                detailsTabContent.classList.add('active');
+                analysisTabContent.classList.remove('active');
+                tabBtnDetails.classList.add('active');
+                tabBtnAnalysis.classList.remove('active');
+            } else if (tabName === 'analysis') {
+                detailsTabContent.classList.remove('active');
+                analysisTabContent.classList.add('active');
+                tabBtnDetails.classList.remove('active');
+                tabBtnAnalysis.classList.add('active');
+            }
+        }
+
+        function clearAnalysisTab(resetDropdowns = false) {
+            if (resetDropdowns) {
+                carrierSelect.innerHTML = '<option value="">-- VUI LÒNG XỬ LÝ DỮ LIỆU --</option>';
+                // MỚI: Reset analysis category checklist
+                analysisCategoryChecklist.innerHTML = '';
+                analysisSelectedCategories.clear();
+                updateAnalysisCategoryButtonText();
+            }
+            // MỚI: Reset bộ lọc lớp
+            layerFilterSelect.value = '0';
+            
+            // --- YÊU CẦU 2: THAY ĐỔI ---
+            carrierNameDisplay.innerHTML = '<p class="text-gray-400 uppercase">VUI LÒNG CHỌN MỘT CARRIER...</p>';
+            carrierNameDisplay.classList.remove('hidden'); // Hiển thị lại
+            // --- KẾT THÚC YÊU CẦU 2 ---
+
+            analysisStowageHighTierDisplay.innerHTML = '<p class="text-gray-400 uppercase">VUI LÒNG CHỌN MỘT CARRIER...</p>';
+            
+            // Xóa biểu đồ cũ
+            if (analysisChart) {
+                analysisChart.destroy();
+                analysisChart = null;
+            }
+        }
+
+        // --- NÂNG CẤP: Tái cấu trúc (Refactor) toàn bộ logic Phân tích ---
+
+        /**
+         * 1. HÀM ĐIỀU KHIỂN CHÍNH (CONTROLLER)
+         * - Lấy input, gọi các hàm logic, và gọi các hàm render.
+         */
+        function handleCarrierAnalysis() {
+            const selectedCarrier = carrierSelect.value;
+            
+            // 1. Reset nếu không có carrier
+            if (!selectedCarrier) {
+                clearAnalysisTab(false);
+                return;
+            }
+
+            // 2. Lấy các giá trị bộ lọc
+            const analysisFilters = {
+                selectedCarrier: selectedCarrier,
+                positionState: positionCurrentRadio.checked ? 'current' : 'planned',
+                selectedCategories: analysisSelectedCategories, // THAY ĐỔI
+                baySortOrder: document.querySelector('input[name="baySortOrder"]:checked').value, // LẤY GIÁ TRỊ SB/PS
+                minLayers: parseInt(layerFilterSelect.value, 10) || 0 // MỚI
+            };
+
+            // 3. Hiển thị Tên Carrier (UI)
+            // --- YÊU CẦU 2: ĐÃ XÓA PHẦN HIỂN THỊ TÊN CARRIER VÌ BỊ LẶP ---
+            /*
+            const names = carrierDictionary.get(selectedCarrier);
+            let nameHTML = '';
+            if (names) {
+                if (names.inName.size > 0) nameHTML += `<p><span class="font-semibold text-white uppercase">Inbound Name:</span> ${Array.from(names.inName).join(', ')}</p>`;
+                if (names.outName.size > 0) nameHTML += `<p><span class="font-semibold text-white uppercase">Outbound Name:</span> ${Array.from(names.outName).join(', ')}</p>`;
+            }
+            */
+            // THAY THẾ: Ẩn div này đi
+            carrierNameDisplay.innerHTML = '';
+            carrierNameDisplay.classList.add('hidden'); 
+            // --- KẾT THÚC YÊU CẦU 2 ---
+
+
+            // 4. LẬT HÌNH NỀN TÀU (UI)
+            // THAY ĐỔI LOGIC:
+            // PS (Mũi -> Lái) = Bay nhỏ -> Bay lớn. Mũi (nhọn) phải ở bên trái (bay nhỏ).
+            // SVG gốc Mũi (nhọn) ở bên phải. => Cần lật (scaleX(-1)).
+            // SB (Lái -> Mũi) = Bay lớn -> Bay nhỏ. Lái (vuông) phải ở bên trái (bay lớn).
+            // SVG gốc Lái (vuông) ở bên trái. => Không lật (scaleX(1)).
+            if (analysisFilters.baySortOrder === 'ps') {
+                shipBackground.style.transform = 'scaleX(-1)'; // Mũi (nhọn) bên trái
+            } else { // 'sb'
+                shipBackground.style.transform = 'scaleX(1)'; // Lái (vuông) bên trái
+            }
+
+            // 5. Gọi hàm lọc (Logic)
+            const relevantRows = getFilteredRows(originalData, analysisFilters);
+            
+            // 6. Gọi hàm phân tích (Logic)
+            const analysisData = analyzeBayData(relevantRows, analysisFilters.baySortOrder); // TRUYỀN THÊM baySortOrder
+            
+            // 7. MỚI: Lọc kết quả phân tích dựa trên minLayers
+            const minLayers = analysisFilters.minLayers;
+            let filteredAnalysisData = { ...analysisData };
+            
+            if (minLayers > 0) {
+                filteredAnalysisData.withHatch = analysisData.withHatch.filter(bay => 
+                    bay.isIntegerLayer && bay.layers >= minLayers
+                );
+            }
+            
+            // 8. Gọi hàm render kết quả (UI) - Dùng dữ liệu ĐÃ LỌC
+            renderAnalysisResult(filteredAnalysisData);
+            
+            // 9. SẮP XẾP DỮ LIỆU CHO BIỂU ĐỒ (UI)
+            // THAY ĐỔI: Dùng allBayDeckParents để đảm bảo tất cả các bay đều
+            // có mặt, ngay cả khi chúng có 0 container.
+
+            const baySortOrder = analysisFilters.baySortOrder;
+            
+            // Tạo Map từ kết quả phân tích để tra cứu nhanh
+            const analysisMap = new Map();
+            // QUAN TRỌNG: Dùng analysisData (chưa lọc) để tạo map
+            analysisData.withHatch.forEach(bay => analysisMap.set(bay.parentBay, bay));
+
+            // Tạo danh sách đầy đủ cho biểu đồ
+            let fullChartData = [];
+            for (const parentBay of allBayDeckParents) {
+                if (analysisMap.has(parentBay)) {
+                    // Bay này có container, dùng dữ liệu phân tích
+                    fullChartData.push(analysisMap.get(parentBay));
+                } else {
+                    // Bay này có trên tàu, nhưng 0 container trong bộ lọc này
+                    // Thêm một placeholder để nó xuất hiện trên biểu đồ
+                    fullChartData.push({ 
+                        parentBay: parentBay, 
+                        layers: 0, 
+                        isIntegerLayer: true // Coi như là 0 lớp, hợp lệ
+                    });
+                }
+            }
+
+            // 10. MỚI: Áp dụng minLayers cho GÍA TRỊ biểu đồ, không lọc danh sách
+            // (THEO YÊU CẦU: "GIỮ TOÀN BỘ SỐ BAY")
+            let chartDataWithLayerFilter = fullChartData.map(bay => {
+                if (minLayers > 0 && (!bay.isIntegerLayer || bay.layers < minLayers)) {
+                    // Nếu không đạt minLayers, vẽ nó là 0
+                    return { ...bay, layers: bay.layers, isIntegerLayer: bay.isIntegerLayer, filteredLayers: 0 }; 
+                }
+                // Giữ nguyên
+                return { ...bay, filteredLayers: bay.isIntegerLayer ? bay.layers : 0 };
+            });
+
+
+            // 11. Sắp xếp danh sách đầy đủ theo yêu cầu (SB/PS)
+            chartDataWithLayerFilter.sort((a, b) => { // THAY ĐỔI: Sắp xếp chartDataWithLayerFilter
+                const numA = parseInt(a.parentBay, 10);
+                const numB = parseInt(b.parentBay, 10);
+                if (isNaN(numA) || isNaN(numB)) return a.parentBay.localeCompare(b.parentBay);
+                
+                if (baySortOrder === 'sb') { // LÁI -> MŨI (lớn đến nhỏ)
+                    return numB - numA;
+                } else { // MŨI -> LÁI (nhỏ đến lớn)
+                    return numA - numB;
+                }
+            });
+            
+            // 12. Gọi hàm render biểu đồ (UI) với dữ liệu ĐẦY ĐỦ đã sắp xếp
+            renderAnalysisChart(chartDataWithLayerFilter); // THAY ĐỔI: Dùng chartDataWithLayerFilter
+        }
+
+        /**
+         * 2. HÀM LỌC (LOGIC)
+         * - Nhận dữ liệu gốc và bộ lọc, trả về các hàng liên quan.
+         */
+        function getFilteredRows(data, filters) {
+            const { selectedCarrier, positionState, selectedCategories } = filters; // THAY ĐỔI
+            const positionColumn = (positionState === 'current') ? 'F' : 'G'; // F = Current, G = Planned
+
+            return data.filter(row => {
+                const isCarrierMatch = row['A'] === selectedCarrier || row['C'] === selectedCarrier;
+                if (!isCarrierMatch) return false;
+                
+                const category = row['I'].toUpperCase();
+                const slotData = row['N'];
+                const slotTrimmed = slotData.trim();
+                const currentPos = row['F'];
+                const plannedPos = row['G'];
+                
+                // BƯỚC 1: Lọc Category (LOGIC MỚI - MULTISELECT)
+                if (selectedCategories.size === 0) {
+                    return false; // Nếu không chọn gì, lọc tất cả
+                }
+                if (!selectedCategories.has(category)) {
+                     return false; // Lọc nếu category của hàng không có trong Set
+                }
+
+                // BƯỚC 2: Kiểm tra 'RESTOW'
+                if (category === 'RESTOW') {
+                    if (currentPos && plannedPos && currentPos === plannedPos && slotTrimmed) {
+                        const isRestowPositionMatch = currentPos.includes(selectedCarrier) && currentPos.includes(slotTrimmed);
+                        if (isRestowPositionMatch) {
+                            return true;
+                        }
+                    }
+                }
+                
+                // BƯỚC 3: Lọc Vị trí (Current/Planned)
+                const positionData = row[positionColumn];
+                if (!positionData || !slotData || slotTrimmed === "") {
+                    return false;
+                }
+                
+                return positionData.includes(selectedCarrier) && positionData.includes(slotTrimmed);
+            });
+        }
+
+        /**
+         * 3. HÀM PHÂN TÍCH (LOGIC)
+         * - Nhận các hàng đã lọc, trả về một đối tượng dữ liệu đã phân tích.
+         */
+        function analyzeBayData(relevantRows, baySortOrder) { // NHẬN baySortOrder
+            let aboveDeckRowCount = 0;
+            let validRows = []; // (Above Deck) VÀ (Tier = Slot)
+
+            relevantRows.forEach(row => {
+                const bayDeck = row['L'];
+                const tier = row['M'];
+                const slot = row['N'];
+                
+                const isBelow = bayDeck.toUpperCase().endsWith('B');
+                
+                if (!isBelow) {
+                    aboveDeckRowCount++;
+                    
+                    if (!tier || !slot || slot.length < 2) return;
+                    
+                    const lastTwoOfSlot = slot.slice(-2);
+                    
+                    if (tier === lastTwoOfSlot) {
+                        const tierNum = parseInt(tier, 10);
+                        if (!isNaN(tierNum)) {
+                            // Chuẩn hóa tên bay ngay lập tức
+                            let bay = bayDeck || 'N/A';
+                            const bayNum = parseInt(bay, 10);
+                            if (!isNaN(bayNum)) {
+                                bay = bay.padStart(2, '0');
+                            }
+                            validRows.push({ tier: tierNum, bay: bay });
+                        }
+                    }
+                }
+            });
+
+            // --- Phân nhóm ---
+            const baysNoHatch = new Set();
+            const hatchRows = [];
+            const allHatchBays = new Set();
+            const allEvenHatchBays = new Set();
+
+            validRows.forEach(item => {
+                if (item.tier < ANALYSIS_RULES.NO_HATCH_TIER_BELOW) {
+                    baysNoHatch.add(item.bay);
+                } else if (item.tier >= ANALYSIS_RULES.HATCH_TIER_ABOVE_OR_EQUAL) {
+                    const bayNum = parseInt(item.bay, 10);
+                    if (!isNaN(bayNum)) {
+                         hatchRows.push(item);
+                         allHatchBays.add(item.bay);
+                         if (bayNum % 2 === 0) {
+                             allEvenHatchBays.add(bayNum);
+                         }
+                    }
+                }
+            });
+            
+            // SẮP XẾP DANH SÁCH noHatch (KHÔNG HẦM) THEO LỰA CHỌN
+            // THAY ĐỔI: Luôn sắp xếp từ nhỏ đến lớn (ascending)
+            const sortedBaysNoHatch = Array.from(baysNoHatch).sort((a, b) => {
+                const numA = parseInt(a, 10);
+                const numB = parseInt(b, 10);
+                // Nếu không phải số, giữ nguyên thứ tự
+                if (isNaN(numA) || isNaN(numB)) return a.localeCompare(b);
+                
+                // LUÔN MŨI -> LÁI (nhỏ đến lớn)
+                return numA - numB;
+            });
+
+            const sortedEvenBays = Array.from(allEvenHatchBays).sort((a, b) => a - b);
+            
+            // Nhóm CÓ HẦM
+            const baysWithHatchAnalysis = new Map();
+            hatchRows.forEach(item => {
+                const parentBay = getBayParent(item.bay, allHatchBays, sortedEvenBays);
+                const tier = item.tier;
+
+                if (!baysWithHatchAnalysis.has(parentBay)) {
+                    baysWithHatchAnalysis.set(parentBay, { 
+                        tiers: [tier],
+                        children: new Set([item.bay]) 
+                    });
+                } else {
+                    const current = baysWithHatchAnalysis.get(parentBay);
+                    current.tiers.push(tier);
+                    current.children.add(item.bay);
+                }
+            });
+
+            // Chuyển Map thành mảng kết quả cuối cùng
+            let withHatchResults = [];
+            let sortedParentBays = Array.from(baysWithHatchAnalysis.keys());
+            
+            // SẮP XẾP DỰA TRÊN baySortOrder
+            // THAY ĐỔI: Luôn sắp xếp từ nhỏ đến lớn (ascending)
+            sortedParentBays.sort((a, b) => {
+                const numA = parseInt(a, 10);
+                const numB = parseInt(b, 10);
+                if (isNaN(numA) || isNaN(numB)) return a.localeCompare(b);
+                
+                // LUÔN MŨI -> LÁI (số nhỏ đến lớn)
+                return numA - numB;
+            });
+            
+            sortedParentBays.forEach(parentBay => {
+                const { tiers, children } = baysWithHatchAnalysis.get(parentBay);
+                if (tiers.length === 0) return;
+                
+                const minTier = Math.min(...tiers);
+                const maxTier = Math.max(...tiers);
+                const countAtMaxTier = tiers.filter(t => t === maxTier).length;
+                
+                let layers = (maxTier >= minTier) ? (maxTier - minTier) / 2 + 1 : 0;
+                const isIntegerLayer = Number.isInteger(layers);
+                
+                withHatchResults.push({
+                    parentBay,
+                    children: Array.from(children).sort(),
+                    minTier,
+                    maxTier,
+                    countAtMaxTier,
+                    layers,
+                    isIntegerLayer
+                });
+            });
+
+            return {
+                stats: {
+                    aboveDeckRowCount: aboveDeckRowCount,
+                    validRowsCount: validRows.length
+                },
+                noHatch: sortedBaysNoHatch, // SỬ DỤNG DANH SÁCH ĐÃ SẮP XẾP
+                withHatch: withHatchResults // Mảng đã được sắp xếp
+            };
+        }
+
+        /**
+         * 4. HÀM HIỂN THỊ KẾT QUẢ (UI)
+         * - Nhận dữ liệu đã phân tích, render HTML
+         */
+        function renderAnalysisResult(analysisData) {
+            const { stats, noHatch, withHatch } = analysisData;
+            const minLayers = parseInt(layerFilterSelect.value, 10) || 0;
+
+            if (stats.validRowsCount === 0) {
+                analysisStowageHighTierDisplay.innerHTML = `
+                    <p>TỔNG SỐ <span class="text-yellow-400">${stats.aboveDeckRowCount}</span> HÀNG "ABOVE DECK" ĐƯỢC TÌM THẤY.</p>
+                    <p class="mt-2 text-red-400">KHÔNG CÓ HÀNG NÀO THỎA MÃN ĐIỀU KIỆN (VESSEL TIER = 2 SỐ CUỐI VESSEL SLOT).</p>
+                `;
+                return;
+            }
+            
+            let resultHTML = `
+                <p>TỔNG SỐ <span class="text-yellow-400">${stats.aboveDeckRowCount}</span> HÀNG "ABOVE DECK".</p>
+                <p>TRONG ĐÓ, <span class="text-yellow-400">${stats.validRowsCount}</span> HÀNG THỎA MÃN (TIER = SLOT).</p>
+            `;
+
+            // Nhóm 1 (Không hầm) - Chỉ hiển thị nếu không lọc lớp
+            if (minLayers === 0) {
+                if (noHatch.length > 0) {
+                    resultHTML += `
+                        <p class="mt-3 text-orange-400 font-semibold">ABOVE DECK (LƯU Ý KO CÓ NẮP HẦM):</p>
+                        <p class="text-cyan-400">${noHatch.join(', ')}</p>
+                    `;
+                } else {
+                     resultHTML += `<p class="mt-3 text-gray-400">KHÔNG TÌM THẤY BAY "ABOVE DECK (LƯU Ý KO CÓ NẮP HẦM)".</p>`;
+                }
+            }
+
+
+            // Nhóm 2 (Có hầm)
+            if (withHatch.length > 0) {
+                resultHTML += `<p class="mt-3 text-green-400 font-semibold">ABOVE DECK${minLayers > 0 ? ` (LỌC >= ${minLayers} LỚP)` : ''}:</p>`;
+                
+                let analysisListHTML = '<ul class="list-disc list-inside space-y-3 mt-2">';
+                
+                withHatch.forEach(bay => {
+                    const { parentBay, children, minTier, maxTier, countAtMaxTier, layers, isIntegerLayer } = bay;
+
+                    const layerText = isIntegerLayer 
+                        ? `${layers} LỚP` 
+                        : `(LỆCH: MIN ${minTier} / MAX ${maxTier})`;
+
+                    // Logic Styling
+                    let liClass = 'text-gray-300';
+                    let bayClass = 'text-cyan-400';
+                    let tierClass = 'text-white';
+                    let layerSpanClass = 'text-yellow-400';
+
+                    if (isIntegerLayer) {
+                        if (layers === 7) { liClass = 'text-orange-400 font-semibold'; bayClass = 'text-orange-500'; tierClass = 'text-orange-300'; layerSpanClass = 'text-orange-400'; }
+                        else if (layers === 8) { liClass = 'text-red-500 font-semibold'; bayClass = 'text-red-600'; tierClass = 'text-red-400'; layerSpanClass = 'text-red-500'; }
+                        else if (layers === 9) { liClass = 'bg-yellow-400 text-red-700 font-bold px-2 py-1 rounded-md'; bayClass = 'text-red-700 opacity-90'; tierClass = 'text-red-700 opacity-90'; layerSpanClass = 'text-red-700'; }
+                    }
+
+                    const childrenList = children.join(', ');
+                    const isGroup = children.length > 1 || children[0] !== parentBay;
+
+                    analysisListHTML += `
+                        <li class="transition-all ${liClass}">
+                            <span class="font-semibold ${bayClass}">
+                                ${isGroup ? `NHÓM BAY ${parentBay}` : `BAY ${parentBay}`}
+                            </span>
+                            ${isGroup ? `<span class="text-gray-400 text-sm">(GỒM: ${childrenList})</span>` : ''}
+                            <br>
+                            MIN TIER: <span class="${tierClass}">${minTier}</span> | 
+                            MAX TIER: <span class="${tierClass}">${maxTier}</span> (<span class="text-white font-bold">${countAtMaxTier}</span> CONTS)
+                            <span class="${layerSpanClass} ml-2">(${layerText})</span>
+                        </li>
+                    `;
+                });
+                
+                analysisListHTML += '</ul>';
+                resultHTML += analysisListHTML;
+
+            } else {
+                 if (minLayers > 0) {
+                     resultHTML += `<p class="mt-3 text-gray-400">KHÔNG TÌM THẤY BAY "ABOVE DECK" THỎA MÃN LỌC (>= ${minLayers} LỚP).</p>`;
+                 } else {
+                     resultHTML += `<p class="mt-3 text-gray-400">KHÔNG TÌM THẤY BAY "ABOVE DECK" (TIER >= ${ANALYSIS_RULES.HATCH_TIER_ABOVE_OR_EQUAL}).</p>`;
+                 }
+            }
+
+            analysisStowageHighTierDisplay.innerHTML = resultHTML;
+        }
+        
+        /**
+         * 5. HÀM HIỂN THỊ BIỂU ĐỒ (UI)
+         * - Nhận dữ liệu đã phân tích, render Chart.js
+         */
+        function renderAnalysisChart(withHatchData) {
+            // Xóa biểu đồ cũ
+            if (analysisChart) {
+                analysisChart.destroy();
+                analysisChart = null;
+            }
+            
+            if (withHatchData.length === 0) {
+                return; // Không có gì để vẽ
+            }
+
+            const ctx = analysisChartCanvas.getContext('2d');
+            
+            // ĐỔI TÊN LABEL TỪ "NHÓM" THÀNH "BAY"
+            const labels = withHatchData.map(b => `BAY ${b.parentBay}`);
+            // THAY ĐỔI: Dùng "filteredLayers"
+            const data = withHatchData.map(b => b.filteredLayers);
+            
+            analysisChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'SỐ LỚP (TIER >= 72)',
+                        data: data,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(37, 99, 235, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        z: 10 // Đảm bảo thanh bar nổi lên trên
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#A0AEC0',
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(74, 85, 104, 0.5)'
+                            },
+                            zIndex: 20 // Đảm bảo trục y nổi lên trên
+                        },
+                        x: {
+                            ticks: {
+                                color: '#A0AEC0',
+                                font: {
+                                    weight: 'bold' // Làm đậm chữ trục X
+                                }
+                            },
+                            grid: {
+                                display: false
+                            },
+                            zIndex: 20 // Đảm bảo trục x nổi lên trên
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#1F2937',
+                            titleColor: '#E5E7EB',
+                            bodyColor: '#D1D5DB',
+                            callbacks: {
+                                label: function(context) {
+                                    // THAY ĐỔI: Hiển thị giá trị gốc
+                                    const originalData = withHatchData[context.dataIndex];
+                                    const displayLayers = originalData.isIntegerLayer ? originalData.layers : 0;
+                                    
+                                    let label = ` ${context.dataset.label || ''}: ${context.parsed.y} LỚP`;
+                                    // Nếu bị lọc về 0, hiển thị giá trị gốc
+                                    if (context.parsed.y === 0 && displayLayers > 0) {
+                                        label += ` (GỐC: ${displayLayers} LỚP - BỊ LỌC)`;
+                                    } else if (!originalData.isIntegerLayer && originalData.layers > 0) {
+                                        label = ` (LỆCH TIER: MIN ${originalData.minTier} / MAX ${originalData.maxTier})`;
+                                    }
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+
+        /**
+         * HELPER: Tìm parent bay (Đã tách ra)
+         */
+        function getBayParent(bayString, allHatchBaysSet, evenBaysArray) {
+            const num = parseInt(bayString, 10);
+            if (isNaN(num)) return bayString;
+            if (num % 2 === 0) return bayString;
+            if (evenBaysArray.length === 0) return bayString;
+
+            // Tìm bay chẵn gần nhất
+            let nearestEven = -1;
+            let minDistance = Infinity;
+
+            for (const evenBayNum of evenBaysArray) {
+                const distance = Math.abs(num - evenBayNum);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestEven = evenBayNum;
+                } else if (distance === minDistance) {
+                    nearestEven = Math.min(nearestEven, evenBayNum);
+                }
+            }
+            
+            if (nearestEven === -1) return bayString;
+            return nearestEven.toString().padStart(2, '0');
+        }
+
+
+        // --- UI Rendering (Details Tab) ---
+        function renderTable(data, container, headerMap, sortState) {
+            if (!data) { container.innerHTML = ''; return; }
+            if (data.length === 0) { container.innerHTML = `<div class="text-center p-8 bg-gray-800 rounded-lg"><p class="text-gray-400 uppercase">KHÔNG CÓ DỮ LIỆU.</p></div>`; return; }
+            
+            const tableHeaders = Array.from(headerMap.keys());
+            let tableHTML = `<div class="table-container"><table class="min-w-full text-left"><thead class="bg-gray-700 sticky top-0"><tr>`;
+
+            tableHeaders.forEach(key => {
+                let sortClass = sortState.key === key ? sortState.order : '';
+                let thClass = `sortable-header ${sortClass}`;
+                tableHTML += `<th class="${thClass}" data-key="${key}">${headerMap.get(key)}<span class="sort-icon"></span></th>`;
+            });
+            tableHTML += `</tr></thead><tbody class="divide-y divide-gray-700">`;
+
+            data.forEach((row, index) => {
+                tableHTML += `<tr class="hover:bg-gray-700/50 transition-colors" data-index="${index}">`;
+                tableHeaders.forEach(key => { 
+                    let cellContent = (row[key] === 0 ? '' : row[key]) || '';
+                    let cellClass = 'text-gray-300';
+                    tableHTML += `<td class="${cellClass}">${cellContent}</td>`; 
+                });
+                tableHTML += `</tr>`;
+            });
+            tableHTML += `</tbody></table></div>`;
+            container.innerHTML = tableHTML;
+        }
+        
+        function showStatus(message, type = 'info', loading = false) {
+            statusDiv.innerHTML = `${loading ? '<div class="loader"></div>' : ''}<span>${message}</span>`;
+            statusDiv.className = 'flex items-center text-gray-400 text-sm flex-grow text-center sm:text-left';
+            const span = statusDiv.querySelector('span');
+            if (type === 'success') span.classList.add('text-green-400'); else if (type === 'error') span.classList.add('text-red-400');
+        }
+
+        function sortData(data, key, order) {
+            data.sort((a, b) => {
+                let valA = a[key] || ''; let valB = b[key] || '';
+                const isNumeric = !isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB)) && valA !== '' && valB !== '';
+                if (isNumeric) { valA = parseFloat(valA); valB = parseFloat(valB); }
+                if (valA < valB) return order === 'asc' ? -1 : 1;
+                if (valA > valB) return order === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+        // Khởi tạo trạng thái tab ban đầu
+        showTab('details');
+    </script>
+</body>
+</html>

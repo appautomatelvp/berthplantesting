@@ -3814,27 +3814,29 @@ td.danger {
     border: 1px solid rgba(45, 212, 191, 0.45);
     box-shadow: 0 0 10px rgba(45, 212, 191, 0.05);
 }
-.field-check {
-    justify-content: flex-start;
-    text-align: left;
-}
-.berth-plan-drawer .field-check-grid.drawer-checks {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.35rem 0.5rem;
-}
-.berth-plan-drawer .field-check-grid.drawer-checks {
-    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
-}
-.field-check {
-    justify-content: space-between !important;
-    flex-direction: row-reverse !important;
-}
-.berth-plan-drawer .field-check {
-    justify-content: space-between !important;
-    flex-direction: row-reverse !important;
-}
+
+
+
+
+.berth-plan-drawer 
 .plan-editor-drawer,
 .active-section {
     border: 1px solid rgba(45, 212, 191, 0.45) !important;
     box-shadow: 0 0 10px rgba(45, 212, 191, 0.05) !important;
+}
+
+.berth-plan-drawer .field-check-grid.drawer-checks {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.4rem;
+}
+.berth-plan-drawer .field-check {
+    flex-direction: column-reverse !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    min-height: 70px;
+    padding: 0.5rem 0.6rem !important;
+    white-space: normal;
+}
+.berth-plan-drawer .field-check input[type="checkbox"] {
+    align-self: flex-end;
 }

@@ -3806,3 +3806,22 @@ td.danger {
 
 
 
+
+/* Fix for wrapping table content without horizontal scroll */
+.svc-table {
+  min-width: 0 !important;
+  word-wrap: break-word;
+}
+.svc-table th, 
+.svc-table td, 
+.svc-table th.num, 
+.svc-table td.num {
+  white-space: normal !important;
+  overflow-wrap: break-word !important;
+  line-height: 1.15;
+}
+.svc-table input,
+.svc-table select,
+.svc-table textarea {
+  white-space: normal !important;
+}

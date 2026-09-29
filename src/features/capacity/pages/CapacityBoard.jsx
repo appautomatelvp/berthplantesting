@@ -15,12 +15,12 @@ import PageToolbar from '../../../shared/components/PageToolbar';
 import { EQUIPMENT_COLORS, EQUIPMENT_ICONS, IconBarge, IconTruck } from '../../../shared/components/icons/PortIcons';
 
 function fmt(n, d = 0) {
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return 'â€”';
   return n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
 }
 
 function pct(n) {
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return 'â€”';
   return `${(n * 100).toFixed(1)}%`;
 }
 
@@ -204,7 +204,7 @@ export default function CapacityBoard({ model }) {
         <div className="kpi-hero">
           <div className="kpi-label">{t('capacity.bu')}</div>
           <div className={`kpi-value ${band?.id || ''}`}>{pct(berth.berthUtilization)}</div>
-          <div className="kpi-band">{band ? t(`bor.${band.id}.label`) : '—'}</div>
+          <div className="kpi-band">{band ? t(`bor.${band.id}.label`) : 'â€”'}</div>
         </div>
         <div className="aligned-fields result-lines">
           {[
@@ -231,7 +231,7 @@ export default function CapacityBoard({ model }) {
               <span>
                 {row.name}{' '}
                 <em>
-                  {row.start}–{row.end}
+                  {row.start}â€“{row.end}
                 </em>
               </span>
               <strong>{fmt(row.calls, 0)}</strong>
@@ -338,8 +338,10 @@ export default function CapacityBoard({ model }) {
                       />
                     </td>
                     <td>
-                      <input
+                      <textarea
                         className="cell"
+                        rows={2}
+                        style={{ resize: "none", overflow: "hidden", minHeight: "2.8rem" }}
                         value={raw.vesselName || ''}
                         placeholder={t('window.vesselPlaceholder')}
                         onChange={(e) => updateService(row.id, { vesselName: e.target.value })}
@@ -482,7 +484,7 @@ export default function CapacityBoard({ model }) {
                     <td className="num">{fmt(row.craneDensity, 1)}</td>
                     <td>
                       <button type="button" className="btn-ghost" onClick={() => removeService(row.id)}>
-                        ✕
+                        âœ•
                       </button>
                     </td>
                   </tr>
@@ -495,7 +497,7 @@ export default function CapacityBoard({ model }) {
                     {t('capacity.bargeDerived')}
                   </span>
                 </td>
-                <td className="muted">—</td>
+                <td className="muted">â€”</td>
                 <td>{t('capacity.callsWeek', { n: fmt(berth.barge.callsPerWeek) })}</td>
                 <td />
                 <td />
@@ -627,3 +629,4 @@ export default function CapacityBoard({ model }) {
     </div>
   );
 }
+

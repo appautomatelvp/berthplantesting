@@ -928,20 +928,7 @@ export default function BerthingWindow({ model }) {
   return (
     <div className={`plan-shell ${selected || toolsOpen ? 'drawer-open' : ''}`}>
       <PageToolbar>
-        <button type="button" className="btn" data-tip={t('tip.jumpNow')} onClick={jumpToNow}>
-          {t('window.jumpNow')}
-        </button>
-        <button type="button" className="btn" data-tip={t('tip.addService')} onClick={addService}>
-          {t('window.addService')}
-        </button>
-        <button
-          type="button"
-          className={`chip ${toolsPanel === 'view' ? 'active' : ''}`}
-          data-tip={t('tip.view')}
-          onClick={() => openToolsPanel('view')}
-        >
-          {t('window.toolGroup.view')}
-        </button>
+        
         <button
           type="button"
           className={`chip ${toolsPanel === 'cranes' ? 'active' : ''}`}
@@ -1281,35 +1268,6 @@ export default function BerthingWindow({ model }) {
                 pushUndo();
               }}
             >
-
-            {toolsPanel === 'view' && (
-              <div className="tool-group-body">
-                <div className="drawer-head">
-                  <h2>{t('window.toolGroup.view')}</h2>
-                  <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} âœ•
-                  </button>
-                </div>
-                <div className="toolbar-controls stack">
-                  <p className="hint" style={{ margin: 0 }}>
-                    {t('timeScale.hint')} {t(`horizon.${ui?.horizon || scaleId}`)}.
-                  </p>
-                  <p className="hint" style={{ margin: '0.35rem 0 0' }}>
-                    {t('window.quayInSettings')}
-                  </p>
-                  <Link className="chip" to="/settings#settings-geometry">
-                    {t('nav.settings')}
-                  </Link>
-                </div>
-                <p className="hint" style={{ margin: '0.75rem 0 0' }}>
-                  {t('window.hint', {
-                    scale: t(`timeScale.${scaleId}`),
-                    quay,
-                    dir: t(meterDirection === 'ltr' ? 'window.dirLtr' : 'window.dirRtl'),
-                  })}
-                </p>
-              </div>
-            )}
 
             {toolsPanel === 'cranes' && (
               <div className="tool-group-body">

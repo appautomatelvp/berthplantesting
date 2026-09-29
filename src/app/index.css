@@ -3810,3 +3810,26 @@ td.danger {
 .svc-table { min-width: 0 !important; word-wrap: break-word; }
 .svc-table th, .svc-table td, .svc-table th.num, .svc-table td.num { white-space: normal !important; overflow-wrap: anywhere !important; line-height: 1.15; padding: 0.15rem; }
 .svc-table input, .svc-table select, .svc-table textarea { white-space: normal !important; }
+.plan-editor-drawer {
+    border: 1px solid rgba(45, 212, 191, 0.45);
+    box-shadow: 0 0 10px rgba(45, 212, 191, 0.05);
+}
+.field-check {
+    justify-content: flex-start;
+    text-align: left;
+}
+.berth-plan-drawer .field-check-grid.drawer-checks {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem 0.5rem;
+}
+.berth-plan-drawer .field-check-grid.drawer-checks {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+}
+.field-check {
+    justify-content: space-between !important;
+    flex-direction: row-reverse !important;
+}
+.berth-plan-drawer .field-check {
+    justify-content: space-between !important;
+    flex-direction: row-reverse !important;
+}

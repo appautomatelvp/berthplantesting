@@ -15,12 +15,12 @@ import PageToolbar from '../../../shared/components/PageToolbar';
 import { EQUIPMENT_COLORS, EQUIPMENT_ICONS, IconBarge, IconTruck } from '../../../shared/components/icons/PortIcons';
 
 function fmt(n, d = 0) {
-  if (!Number.isFinite(n)) return 'â€”';
+  if (!Number.isFinite(n)) return '—';
   return n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
 }
 
 function pct(n) {
-  if (!Number.isFinite(n)) return 'â€”';
+  if (!Number.isFinite(n)) return '—';
   return `${(n * 100).toFixed(1)}%`;
 }
 
@@ -204,7 +204,7 @@ export default function CapacityBoard({ model }) {
         <div className="kpi-hero">
           <div className="kpi-label">{t('capacity.bu')}</div>
           <div className={`kpi-value ${band?.id || ''}`}>{pct(berth.berthUtilization)}</div>
-          <div className="kpi-band">{band ? t(`bor.${band.id}.label`) : 'â€”'}</div>
+          <div className="kpi-band">{band ? t(`bor.${band.id}.label`) : '—'}</div>
         </div>
         <div className="aligned-fields result-lines">
           {[
@@ -231,7 +231,7 @@ export default function CapacityBoard({ model }) {
               <span>
                 {row.name}{' '}
                 <em>
-                  {row.start}â€“{row.end}
+                  {row.start}–{row.end}
                 </em>
               </span>
               <strong>{fmt(row.calls, 0)}</strong>
@@ -308,8 +308,8 @@ export default function CapacityBoard({ model }) {
                 <th className="num">{t('capacity.th.netStay')}</th>
                 <th className="num">{t('capacity.th.berthH')}</th>
                 <th className="num">{t('capacity.th.meterH')}</th>
-                <th className="num">{t('window.proformaVolume')}</th>
-                <th className="num">{t('window.expectedVolume')}</th>
+                <th className="num">'PROFORMA'</th>
+                <th className="num">'D? KI?N'</th>
                 <th className="num">{t('capacity.th.pmph')}</th>
                 <th className="num">{t('capacity.th.crane')}</th>
                 <th />
@@ -338,14 +338,7 @@ export default function CapacityBoard({ model }) {
                       />
                     </td>
                     <td>
-                      <textarea
-                        className="cell"
-                        rows={2}
-                        style={{ resize: "none", overflow: "hidden", minHeight: "2.8rem" }}
-                        value={raw.vesselName || ''}
-                        placeholder={t('window.vesselPlaceholder')}
-                        onChange={(e) => updateService(row.id, { vesselName: e.target.value })}
-                      />
+                      <textarea className="cell" rows={2} style={{ resize: "none", overflow: "hidden", minHeight: "2.4rem", background: "transparent", border: "none", color: "inherit", outline: "none", textAlign: "center" }} value={raw.vesselName || ""} placeholder={t("window.vesselPlaceholder")} onChange={(e) => updateService(row.id, { vesselName: e.target.value })} />
                     </td>
                     <td>
                       <select
@@ -484,7 +477,7 @@ export default function CapacityBoard({ model }) {
                     <td className="num">{fmt(row.craneDensity, 1)}</td>
                     <td>
                       <button type="button" className="btn-ghost" onClick={() => removeService(row.id)}>
-                        âœ•
+                        ✕
                       </button>
                     </td>
                   </tr>
@@ -497,7 +490,7 @@ export default function CapacityBoard({ model }) {
                     {t('capacity.bargeDerived')}
                   </span>
                 </td>
-                <td className="muted">â€”</td>
+                <td className="muted">—</td>
                 <td>{t('capacity.callsWeek', { n: fmt(berth.barge.callsPerWeek) })}</td>
                 <td />
                 <td />
@@ -629,4 +622,3 @@ export default function CapacityBoard({ model }) {
     </div>
   );
 }
-

@@ -1352,7 +1352,7 @@ export default function BerthingWindow({ model }) {
                       checked={ui?.showShiftMarks !== false}
                       onChange={() => setUi({ ...ui, showShiftMarks: ui?.showShiftMarks === false })}
                     />
-                    {t('window.showShiftMarks')}
+                    <span style={{ flex: 1, textAlign: 'left' }}>{t('window.showShiftMarks')}</span>
                   </label>
                   <div className="field-check-grid drawer-checks">
                     {BLOCK_FIELD_OPTIONS.map((key) => {
@@ -1373,7 +1373,7 @@ export default function BerthingWindow({ model }) {
                               });
                             }}
                           />
-                          {t(`window.blockField.${key}`)}
+                          <span style={{ flex: 1, textAlign: 'left' }}>{t(`window.blockField.${key}`)}</span>
                         </label>
                       );
                     })}

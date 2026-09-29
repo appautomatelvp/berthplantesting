@@ -3835,7 +3835,7 @@ td.danger {
     align-items: center !important;
     justify-content: space-between !important;
     min-height: auto;
-    padding: 0.5rem 0.75rem !important;
+    padding: 0.35rem 0.5rem !important;
     white-space: normal;
 }
 .berth-plan-drawer .field-check input[type="checkbox"] {

@@ -2675,10 +2675,7 @@ select:focus {
   margin-top: 0.45rem;
 }
 
-.berth-plan-drawer .field-check-grid.drawer-checks {
-  grid-template-columns: 1fr 1fr;
-  gap: 0.28rem 0.4rem;
-}
+
 
 .berth-plan-drawer .field-check.span-all {
   grid-column: 1 / -1;
@@ -3825,9 +3822,12 @@ td.danger {
     box-shadow: 0 0 10px rgba(45, 212, 191, 0.05) !important;
 }
 
+/* DRAWER LABEL CHECKS - single row with tick on right */
 .berth-plan-drawer .field-check-grid.drawer-checks {
     grid-template-columns: 1fr !important;
-    gap: 0.4rem;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    gap: 0.25rem !important;
 }
 .berth-plan-drawer .field-check {
     display: flex !important;
@@ -3836,23 +3836,32 @@ td.danger {
     justify-content: space-between !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding: 0.6rem 0.8rem !important;
+    min-width: 0 !important;
+    padding: 0.4rem 0.7rem !important;
+    gap: 0 !important;
 }
-.berth-plan-drawer .field-check span {
-    flex: 1 1 auto !important;
-    white-space: nowrap !important;
+.berth-plan-drawer .field-check span:first-child {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
     overflow: hidden !important;
+    white-space: nowrap !important;
     text-overflow: ellipsis !important;
     text-align: left !important;
-    margin-right: 1rem !important;
+    padding-right: 0.5rem !important;
 }
 .berth-plan-drawer .field-check input[type="checkbox"] {
     flex: 0 0 auto !important;
     margin: 0 !important;
-    align-self: center !important;
 }
-.berth-plan-drawer .field-check-grid.drawer-checks {
-    width: 100% !important;
-    display: grid !important;
-    justify-items: stretch !important;
+.berth-plan-drawer .tool-group-body,
+.berth-plan-drawer .service-editor-body {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+.berth-plan-drawer .block-fields-config {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
 }

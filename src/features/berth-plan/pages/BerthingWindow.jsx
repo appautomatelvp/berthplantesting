@@ -1346,22 +1346,33 @@ export default function BerthingWindow({ model }) {
                   <p className="hint" style={{ margin: '0.25rem 0 0.45rem' }}>
                     {t('window.blockFieldsHint')}
                   </p>
-                  <label className={`field-check span-all ${ui?.showShiftMarks !== false ? 'on' : ''}`} data-tip={t('tip.shiftMark')}>
+                  <label
+                    className={`field-check span-all ${ui?.showShiftMarks !== false ? 'on' : ''}`}
+                    data-tip={t('tip.shiftMark')}
+                    style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.7rem', gap: '0.5rem' }}
+                  >
+                    <span style={{ flex: '1 1 auto', minWidth: 0 }}>{t('window.showShiftMarks')}</span>
                     <input
                       type="checkbox"
                       checked={ui?.showShiftMarks !== false}
                       onChange={() => setUi({ ...ui, showShiftMarks: ui?.showShiftMarks === false })}
+                      style={{ flexShrink: 0, margin: 0 }}
                     />
-                    <span style={{ flex: 1, textAlign: 'left' }}>{t('window.showShiftMarks')}</span>
                   </label>
-                  <div className="field-check-grid drawer-checks">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', width: '100%' }}>
                     {BLOCK_FIELD_OPTIONS.map((key) => {
                       const on = blockFields.includes(key);
                       return (
-                        <label key={key} className={`field-check ${on ? 'on' : ''}`}>
+                        <label
+                          key={key}
+                          className={`field-check ${on ? 'on' : ''}`}
+                          style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', boxSizing: 'border-box', padding: '0.4rem 0.7rem', gap: '0.5rem' }}
+                        >
+                          <span style={{ flex: '1 1 auto', minWidth: 0 }}>{t(`window.blockField.${key}`)}</span>
                           <input
                             type="checkbox"
                             checked={on}
+                            style={{ flexShrink: 0, margin: 0 }}
                             onChange={() => {
                               const next = on
                                 ? blockFields.filter((f) => f !== key)
@@ -1373,7 +1384,6 @@ export default function BerthingWindow({ model }) {
                               });
                             }}
                           />
-                          <span style={{ flex: 1, textAlign: 'left' }}>{t(`window.blockField.${key}`)}</span>
                         </label>
                       );
                     })}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+﻿@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
   --bg0: #07131f;
@@ -894,23 +894,20 @@ select:focus {
   vertical-align: bottom;
 }
 
-.svc-table {
-  width: 100%;
-  table-layout: fixed;
-}
+.svc-table { width: 100%; min-width: 1600px; table-layout: fixed; }
 .svc-table th,
 .svc-table td {
   padding: 0.28rem 0.18rem;
   font-size: 0.72rem;
 }
-.svc-table col.c-svc { width: 5.5%; }
-.svc-table col.c-color { width: 3%; }
-.svc-table col.c-vessel { width: 10%; }
-.svc-table col.c-kind { width: 7.2%; }
-.svc-table col.c-pct { width: 4.2%; }
-.svc-table col.c-num { width: 4.6%; }
-.svc-table col.c-time { width: 8.2%; }
-.svc-table col.c-act { width: 2.4%; }
+.svc-table col.c-svc { width: 6%; }
+.svc-table col.c-color { width: 2.5%; }
+.svc-table col.c-vessel { width: 10.5%; }
+.svc-table col.c-kind { width: 7.5%; }
+.svc-table col.c-pct { width: 5%; }
+.svc-table col.c-num { width: 5.5%; }
+.svc-table col.c-time { width: 8.5%; }
+.svc-table col.c-act { width: 2.5%; }
 .svc-table .cell,
 .svc-table .cell.num,
 .svc-table input,
@@ -1093,7 +1090,7 @@ select:focus {
   margin-top: 0.2rem;
 }
 
-/* Berthing window — continuous hour scroll */
+/* Berthing window â€” continuous hour scroll */
 .window-scroll {
   overflow: auto;
   border: 1px solid var(--line);
@@ -3799,6 +3796,7 @@ td.danger {
   color: var(--muted);
   line-height: 1.4;
 }
+
 
 
 

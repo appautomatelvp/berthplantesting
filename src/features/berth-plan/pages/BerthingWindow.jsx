@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { calcBerthCapacity, dayIndex, toDayFraction } from '../../capacity/utils/index';
 import { useI18n } from '../../../shared/i18n/I18nContext';
@@ -44,7 +44,7 @@ function uid() {
 }
 
 function fmt(n, d = 1) {
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return 'â€”';
   return n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
 }
 
@@ -61,7 +61,7 @@ function buildBlockFacts(block, fields, t) {
   for (const key of fields) {
     switch (key) {
       case 'service':
-        push(key, '', block.service || '—', true);
+        push(key, '', block.service || 'â€”', true);
         break;
       case 'vessel':
         if (block.vesselName) push(key, '', block.vesselName);
@@ -70,7 +70,7 @@ function buildBlockFacts(block, fields, t) {
         push(
           key,
           '',
-          `${t(`days.${block.etbDay}`)} ${block.etbTime} → ${t(`days.${block.etdDay}`)} ${block.etdTime}`
+          `${t(`days.${block.etbDay}`)} ${block.etbTime} â†’ ${t(`days.${block.etdDay}`)} ${block.etdTime}`
         );
         break;
       case 'loa':
@@ -80,7 +80,7 @@ function buildBlockFacts(block, fields, t) {
         push(key, t('window.blockField.occupation'), fmt(block.occupation, 0));
         break;
       case 'berthRange':
-        push(key, t('window.blockField.berthRange'), `${fmt(block.fromMeter, 0)}–${fmt(block.toMeter, 0)}`);
+        push(key, t('window.blockField.berthRange'), `${fmt(block.fromMeter, 0)}â€“${fmt(block.toMeter, 0)}`);
         break;
       case 'volume':
         push(key, t('window.blockField.volume'), fmt(block.volume, 0));
@@ -125,7 +125,7 @@ function cloneServices(rows) {
   return rows.map((r) => ({ ...r }));
 }
 
-/** Intersection rectangles where two services occupy the same time × quay segment. */
+/** Intersection rectangles where two services occupy the same time Ã— quay segment. */
 function computeOverlapRegions(blocks) {
   const regions = [];
   for (let i = 0; i < blocks.length; i++) {
@@ -313,7 +313,7 @@ export default function BerthingWindow({ model }) {
     });
   }, []);
 
-  /** Click outside the side panel → auto-collapse (chart stays usable while tools are open). */
+  /** Click outside the side panel â†’ auto-collapse (chart stays usable while tools are open). */
   useEffect(() => {
     if (!selectedId && !toolsPanel) return;
     const onPointerDown = (e) => {
@@ -517,7 +517,7 @@ export default function BerthingWindow({ model }) {
         return;
       }
 
-      // Arrow nudge — Excel-like cell move
+      // Arrow nudge â€” Excel-like cell move
       if (!selectedIdRef.current) return;
       const row = servicesRef.current.find((s) => s.id === selectedIdRef.current);
       if (!row) return;
@@ -850,7 +850,7 @@ export default function BerthingWindow({ model }) {
       }
 
       if (d.mode === 'resize-loa' || d.mode === 'resize-loa-w') {
-        // Visual right (resize-loa) / left (resize-loa-w) → change occupation width
+        // Visual right (resize-loa) / left (resize-loa-w) â†’ change occupation width
         const meterEdge = clientXToMeter(e.clientX, plot, quay, meterDirection);
         const origTo = d.origFrom + d.origOcc;
         const minOcc = 40;
@@ -1132,7 +1132,7 @@ export default function BerthingWindow({ model }) {
                         width: pos.width,
                         opacity: hidden ? 0.08 : 1,
                       }}
-                      title={`${t('ops.bargeWindow')} ${Math.round(win.fromMeter)}–${Math.round(win.toMeter)} m`}
+                      title={`${t('ops.bargeWindow')} ${Math.round(win.fromMeter)}â€“${Math.round(win.toMeter)} m`}
                     >
                       {height >= 28 && (
                         <span>
@@ -1152,7 +1152,7 @@ export default function BerthingWindow({ model }) {
                   const dimLock = chartLayer === 'mother' || chartLayer === 'barge';
                   const tip = [
                     lz.reason || t('lockZone.title'),
-                    `${Math.round(lz.fromMeter)}–${Math.round(lz.toMeter)}m`,
+                    `${Math.round(lz.fromMeter)}â€“${Math.round(lz.toMeter)}m`,
                     `${lz.capacityPct}% ${t('lockZone.capacityShort')}`,
                   ].join('\n');
                   return (
@@ -1178,7 +1178,7 @@ export default function BerthingWindow({ model }) {
                       <div className="lock-zone-body">
                         <strong>{lz.reason || t('lockZone.title')}</strong>
                         <span>
-                          {Math.round(lz.lengthM)}m · {lz.capacityPct}%
+                          {Math.round(lz.lengthM)}m Â· {lz.capacityPct}%
                         </span>
                       </div>
                     </div>
@@ -1287,7 +1287,7 @@ export default function BerthingWindow({ model }) {
                 <div className="drawer-head">
                   <h2>{t('window.toolGroup.view')}</h2>
                   <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} ✕
+                    {t('window.closeEditor')} âœ•
                   </button>
                 </div>
                 <div className="toolbar-controls stack">
@@ -1316,7 +1316,7 @@ export default function BerthingWindow({ model }) {
                 <div className="drawer-head">
                   <h2>{t('window.toolGroup.cranes')}</h2>
                   <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} ✕
+                    {t('window.closeEditor')} âœ•
                   </button>
                 </div>
                 <CraneManager
@@ -1335,7 +1335,7 @@ export default function BerthingWindow({ model }) {
                 <div className="drawer-head">
                   <h2>{t('window.toolGroup.locks')}</h2>
                   <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} ✕
+                    {t('window.closeEditor')} âœ•
                   </button>
                 </div>
                 <LockZoneManager
@@ -1355,7 +1355,7 @@ export default function BerthingWindow({ model }) {
                 <div className="drawer-head">
                   <h2>{t('window.toolGroup.labels')}</h2>
                   <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                    {t('window.closeEditor')} ✕
+                    {t('window.closeEditor')} âœ•
                   </button>
                 </div>
                 <div className="block-fields-config">
@@ -1424,7 +1424,7 @@ export default function BerthingWindow({ model }) {
               <div className="drawer-head">
                 <h2>{t('window.selected')}</h2>
                 <button type="button" className="btn-ghost" data-tip={t('tip.close')} onClick={closeDrawer}>
-                  {t('window.closeEditor')} ✕
+                  {t('window.closeEditor')} âœ•
                 </button>
               </div>
               <div className="field-grid single">
@@ -1661,7 +1661,7 @@ export default function BerthingWindow({ model }) {
                   <input
                     type="number"
                     step={5}
-                    value={selected.berthStart ?? selectedCalc?.fromMeter ?? 0}
+                    value={Math.round(selected.berthStart ?? selectedCalc?.fromMeter ?? 0)}
                     onChange={(e) =>
                       patchService(
                         selected.id,

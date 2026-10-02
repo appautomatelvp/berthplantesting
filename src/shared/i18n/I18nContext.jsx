@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+﻿import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { getByPath, interpolate, LOCALES, translations } from './translations';
 
 const STORAGE_KEY = 'bcl.locale';
@@ -32,8 +32,15 @@ export function I18nProvider({ children, initialLocale = 'vi' }) {
 
   const t = useCallback(
     (path, vars) => {
-      const primary = getByPath(translations[locale], path);
-      const fallback = getByPath(translations.en, path);
+      let p = path;
+      if (typeof p === 'string' && (p.startsWith('days.') || p.startsWith('daysFull.'))) {
+        const parts = p.split('.');
+        if (parts.length > 1) {
+          p = parts[0] + '.' + parts[1].toLowerCase();
+        }
+      }
+      const primary = getByPath(translations[locale], p);
+      const fallback = getByPath(translations.en, p);
       const raw = primary ?? fallback ?? path;
       return typeof raw === 'string' ? interpolate(raw, vars) : raw;
     },
@@ -53,3 +60,4 @@ export function useI18n() {
   if (!ctx) throw new Error('useI18n must be used within I18nProvider');
   return ctx;
 }
+

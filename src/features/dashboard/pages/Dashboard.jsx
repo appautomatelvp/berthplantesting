@@ -531,7 +531,7 @@ function MiniGantt({ blocks, quayLength, colorMap, t }) {
               const y2 = (c.toMeter / q) * plotH;
               const barH = Math.max(6, y2 - y1);
               return (
-                <clipPath id={`clip-mini-${c.id || i}`} key={c.id || i}>
+                <clipPath id={`clip-mini-${i}`} key={i}>
                   <rect x={x1 + 1} y={y1 + 1} width={Math.max(0, barW - 4)} height={Math.max(0, barH - 2)} />
                 </clipPath>
               );
@@ -634,7 +634,7 @@ function MiniGantt({ blocks, quayLength, colorMap, t }) {
                   <text
                     x={x1 + 3}
                     y={startY}
-                    clipPath={`url(#clip-mini-${c.id || i})`}
+                    clipPath={`url(#clip-mini-${i})`}
                     style={{ fontSize: 6.5, fill: '#fff', fontWeight: 600, pointerEvents: 'none' }}
                   >
                     {linesToDraw.map((line, idx) => (

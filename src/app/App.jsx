@@ -581,7 +581,7 @@ export default function App() {
         </div>
       </header>
       <ButtonHints />
-      <main className="app-main">
+      <main className={`app-main${path === '/window' ? ' app-main--window' : ''}`}>
         {(path === '/' || path === '/dashboard') && <Dashboard model={model} />}
         {path === '/window' && <BerthingWindow model={model} />}
         {path === '/capacity' && <CapacityBoard model={model} />}

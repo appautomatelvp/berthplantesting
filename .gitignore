@@ -15,3 +15,15 @@ dist/
 vercel.json
 .netlify/
 .vercel
+
+fix_*.cjs
+fix_*.js
+fix_*.mjs
+replaceGantt*.mjs
+replaceGantt*.js
+replaceCallsWithGantt.cjs
+scratch_recovered*.txt
+trim_dashboard.cjs
+test_dashboard_fix.jsx
+src/features/dashboard/pages/Dashboard_fixed.jsx
+*_fixed.jsx

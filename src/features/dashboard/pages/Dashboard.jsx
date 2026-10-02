@@ -436,6 +436,248 @@ function OccupationChart({ rows, colorMap, t }) {
   );
 }
 
+
+const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+
+function MiniGantt({ blocks, quayLength, colorMap, t }) {
+  const [hov, setHov] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const totalH = 168;
+  const w = 700;
+  const padL = 48;
+  const padR = 12;
+  const innerW = w - padL - padR;
+  const svgH = 340;
+  const plotH = svgH - 20;
+  const q = Math.max(1, quayLength || 600);
+
+  // Only show week 0 blocks, normalize hours to 0-168 range for display
+  const week0Blocks = useMemo(
+    () => (blocks || []).filter((c) => (c.weekIndex ?? 0) === 0).map((c) => ({
+      ...c,
+      startHour: c.startHour % 168,
+      endHour: Math.min(c.endHour % 168 === 0 && c.endHour > 0 ? 168 : c.endHour % 168, 168),
+    })),
+    [blocks]
+  );
+
+  const services = useMemo(
+    () => [...new Set(week0Blocks.map((c) => String(c.service || '').toUpperCase()))].filter(Boolean),
+    [week0Blocks]
+  );
+  const filtered =
+    filter === 'all'
+      ? week0Blocks
+      : week0Blocks.filter((c) => String(c.service || '').toUpperCase() === filter);
+
+  const overlaps = useMemo(() => {
+    const regions = [];
+    for (let i = 0; i < filtered.length; i++) {
+      for (let j = i + 1; j < filtered.length; j++) {
+        const a = filtered[i];
+        const b = filtered[j];
+        const startHour = Math.max(a.startHour, b.startHour);
+        const endHour = Math.min(a.endHour, b.endHour);
+        const fromMeter = Math.max(a.fromMeter, b.fromMeter);
+        const toMeter = Math.min(a.toMeter, b.toMeter);
+        if (startHour < endHour && fromMeter < toMeter) {
+          regions.push({
+            startHour,
+            endHour,
+            fromMeter,
+            toMeter,
+            key: `ov-${i}-${j}-${startHour}`,
+          });
+        }
+      }
+    }
+    return regions;
+  }, [filtered]);
+
+  return (
+    <div className="dash-gantt">
+      <div className="dash-gantt-filters">
+        <button
+          type="button"
+          className={`chip ${filter === 'all' ? 'active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          {t('ops.layerAll')}
+        </button>
+        {services.map((s) => (
+          <button
+            key={s}
+            type="button"
+            className={`chip ${filter === s ? 'active' : ''}`}
+            style={
+              filter === s
+                ? { background: colorMap.get(s) || undefined, borderColor: colorMap.get(s) || undefined, color: '#fff' }
+                : {}
+            }
+            onClick={() => setFilter((f) => (f === s ? 'all' : s))}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+      <div style={{ position: 'relative', overflowX: 'auto' }}>
+        <svg viewBox={`0 0 ${w} ${svgH}`} style={{ width: '100%', minWidth: 400, display: 'block' }}>
+          <defs>
+            {filtered.map((c, i) => {
+              const x1 = padL + (c.startHour / totalH) * innerW;
+              const x2 = padL + (Math.min(c.endHour, totalH) / totalH) * innerW;
+              const barW = Math.max(4, x2 - x1);
+              const y1 = (c.fromMeter / q) * plotH;
+              const y2 = (c.toMeter / q) * plotH;
+              const barH = Math.max(6, y2 - y1);
+              return (
+                <clipPath id={`clip-mini-${c.id || i}`} key={c.id || i}>
+                  <rect x={x1 + 1} y={y1 + 1} width={Math.max(0, barW - 4)} height={Math.max(0, barH - 2)} />
+                </clipPath>
+              );
+            })}
+          </defs>
+
+          {DAY_ORDER.map((day, i) => {
+            const x = padL + (i / 7) * innerW;
+            const dayW = innerW / 7;
+            return (
+              <g key={day}>
+                {i % 2 === 1 && <rect x={x} y={0} width={dayW} height={svgH - 16} fill="rgba(30,58,85,0.15)" />}
+                <line x1={x} y1={0} x2={x} y2={svgH - 16} stroke="rgba(30,58,85,0.5)" strokeWidth="1" />
+                <text x={x + dayW / 2} y={svgH - 4} textAnchor="middle" style={{ fontSize: 9, fill: 'var(--muted)' }}>
+                  {t(`days.${day}`)}
+                </text>
+              </g>
+            );
+          })}
+          <line
+            x1={padL + innerW}
+            y1={0}
+            x2={padL + innerW}
+            y2={svgH - 16}
+            stroke="rgba(30,58,85,0.5)"
+            strokeWidth="1"
+          />
+
+          {[0, 0.25, 0.5, 0.75, 1].map((pct) => {
+            const meter = Math.round(q * pct);
+            const y = pct * plotH;
+            return (
+              <g key={pct}>
+                <text
+                  x={padL - 6}
+                  y={y + 3}
+                  textAnchor="end"
+                  style={{ fontSize: 8, fill: 'var(--muted)', fontWeight: 500 }}
+                >
+                  {meter}m
+                </text>
+                <line x1={padL - 3} x2={padL} y1={y} y2={y} stroke="rgba(138,160,184,0.4)" strokeWidth="1" />
+              </g>
+            );
+          })}
+
+          {filtered.map((c, i) => {
+            const x1 = padL + (c.startHour / totalH) * innerW;
+            const x2 = padL + (Math.min(c.endHour, totalH) / totalH) * innerW;
+            const barW = Math.max(4, x2 - x1);
+            const y1 = (c.fromMeter / q) * plotH;
+            const y2 = (c.toMeter / q) * plotH;
+            const barH = Math.max(6, y2 - y1);
+            const color = colorMap.get(String(c.service || '').trim().toUpperCase()) || '#0e7490';
+
+            const vName = (c.vesselName || c.service || '').replace(/^MV\s+/i, '');
+            const etbStr = t(`days.${c.etbDay}`) + ' ' + (c.etbTime || '');
+            const etdStr = t(`days.${c.etdDay}`) + ' ' + (c.etdTime || '');
+
+            const lineH = 10;
+            const lines = [
+              vName,
+              `LOA: ${c.loa || 0}m`,
+              `ETB: ${etbStr}`,
+              `ETD: ${etdStr}`,
+              `Vol: ${c.expectedVolume || c.volume || 0}`,
+            ];
+            const linesToDraw = lines.filter((_, idx) => idx * lineH + lineH <= barH);
+            const totalTextH = linesToDraw.length * lineH;
+            const startY = y1 + (barH - totalTextH) / 2 + lineH * 0.75;
+
+            return (
+              <g key={c.key || c.id || `${c.service}-${c.startHour}-${i}`}>
+                <rect
+                  x={x1}
+                  y={y1}
+                  width={barW}
+                  height={barH}
+                  rx="3"
+                  fill={color}
+                  opacity="0.85"
+                  style={{ cursor: 'pointer' }}
+                  onMouseMove={(e) =>
+                    setHov({
+                      x: e.clientX,
+                      y: e.clientY,
+                      title: vName,
+                      rows: [
+                        { label: t('capacity.th.service'), color, value: c.service },
+                        { label: 'LOA', color: '#8aa0b8', value: `${c.loa || 0}m` },
+                        { label: t('capacity.th.etb'), color, value: etbStr },
+                        { label: 'ETD', color, value: etdStr },
+                        { label: 'Meter', color: '#8aa0b8', value: `${Math.round(c.fromMeter)}–${Math.round(c.toMeter)}m` },
+                      ],
+                    })
+                  }
+                  onMouseLeave={() => setHov(null)}
+                />
+                {barW > 20 && linesToDraw.length > 0 && (
+                  <text
+                    x={x1 + 3}
+                    y={startY}
+                    clipPath={`url(#clip-mini-${c.id || i})`}
+                    style={{ fontSize: 6.5, fill: '#fff', fontWeight: 600, pointerEvents: 'none' }}
+                  >
+                    {linesToDraw.map((line, idx) => (
+                      <tspan key={idx} x={x1 + 3} dy={idx === 0 ? 0 : lineH}>
+                        {line}
+                      </tspan>
+                    ))}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+
+          {overlaps.map((ov) => {
+            const x1 = padL + (ov.startHour / totalH) * innerW;
+            const x2 = padL + (Math.min(ov.endHour, totalH) / totalH) * innerW;
+            const barW = Math.max(2, x2 - x1);
+            const y1 = (ov.fromMeter / q) * plotH;
+            const y2 = (ov.toMeter / q) * plotH;
+            const barH = Math.max(2, y2 - y1);
+            return (
+              <rect
+                key={ov.key}
+                x={x1}
+                y={y1}
+                width={barW}
+                height={barH}
+                rx="3"
+                fill="rgba(239,68,68,0.22)"
+                stroke="var(--danger)"
+                strokeWidth="2"
+                strokeDasharray="4 2"
+                style={{ pointerEvents: 'none' }}
+              />
+            );
+          })}
+        </svg>
+        <ChartTip hover={hov} />
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard({ model }) {
   const { t } = useI18n();
   const { terminal, metrics, services, equipment, lockZones, cranes, externalBerths, ui } = model;
@@ -479,7 +721,7 @@ export default function Dashboard({ model }) {
   const ts = dash.timeSeries || [];
 
   const axisLabels = useMemo(() => {
-    if (period === 'week') return ts.map((d) => t(`daysFull.${d.key}`));
+    if (period === 'week') return ts.map((d) => t(`days.${d.key}`));
     if (period === 'month') {
       return ts.map((d, i) => {
         const [week, day] = String(d.key).split('-');
@@ -600,6 +842,8 @@ export default function Dashboard({ model }) {
 
   return (
     <div className="page-grid dashboard-page">
+
+      {/* ── Tiêu đề ── */}
       <section className="panel span-12 dashboard-hero">
         <div className="dashboard-hero-main">
           <h2>{t('dashboard.title')}</h2>
@@ -607,79 +851,153 @@ export default function Dashboard({ model }) {
         </div>
       </section>
 
+      {/* ── 4 KPI tổng quan ── */}
       <section className="panel span-3 kpi-card">
-        <span className="kpi-label">{t('dashboard.kpi.bu')}</span>
+        <span className="kpi-label">Tỷ lệ chiếm dụng cầu bến (BOR)</span>
         <strong className={`kpi-value ${k.bu >= 0.7 ? 'danger' : k.bu >= 0.55 ? 'warn' : 'ok'}`}>
           {pct(k.bu)}
         </strong>
         <span className="kpi-sub">{band ? t(`bor.${band.id}.label`) : '—'}</span>
       </section>
       <section className="panel span-3 kpi-card">
-        <span className="kpi-label">{t('dashboard.kpi.expectedMoves')}</span>
+        <span className="kpi-label">Sản lượng dự kiến (Moves)</span>
         <strong className="kpi-value">{fmt(k.expectedMoves, 0)}</strong>
-        <span className="kpi-sub">
-          {t('dashboard.kpi.vsProforma')}: {fmt(k.proformaMoves, 0)}
-        </span>
+        <span className="kpi-sub">Proforma: {fmt(k.proformaMoves, 0)}</span>
       </section>
       <section className="panel span-3 kpi-card">
-        <span className="kpi-label">{t('dashboard.kpi.calls')}</span>
+        <span className="kpi-label">Lượt tàu cập bến</span>
         <strong className="kpi-value">{fmt(k.calls, 0)}</strong>
-        <span className="kpi-sub">
-          {t('dashboard.kpi.serviceLines')}: {k.serviceLines}
-        </span>
+        <span className="kpi-sub">Tuyến dịch vụ: {k.serviceLines}</span>
       </section>
       <section className="panel span-3 kpi-card">
-        <span className="kpi-label">{t('dashboard.kpi.avgPmph')}</span>
+        <span className="kpi-label">Năng suất bốc dỡ PMPH</span>
         <strong className="kpi-value">{fmt(k.avgPmph, 1)}</strong>
-        <span className="kpi-sub">
-          {t('dashboard.kpi.avgCraneDensity')}: {fmt(k.avgCraneDensity, 2)}
-        </span>
+        <span className="kpi-sub">Mật độ cẩu TB: {fmt(k.avgCraneDensity, 2)}</span>
       </section>
 
-      <StrategyPanels berth={dash.berth} ops={ops} />
-
+      {/* ── Lịch tàu cập bến (ưu tiên cao nhất – gần đầu trang) ── */}
       <section className="panel span-12">
-        <h3>{t('dashboard.chart.areaSection')}</h3>
-        <p className="hint">{t('dashboard.chart.areaSectionHint')}</p>
-        <div className="area-chart-grid">
-          <AreaChart
-            title={t('dashboard.chart.areaVolume')}
-            hint={t('dashboard.chart.areaVolumeHint')}
-            labels={areaVolume.labels}
-            tipLabels={tipLabels}
-            series={areaVolume.series}
-          />
-          <AreaChart
-            title={t('dashboard.chart.areaMh')}
-            hint={t('dashboard.chart.areaMhHint')}
-            labels={areaMh.labels}
-            tipLabels={tipLabels}
-            series={areaMh.series}
-          />
-          <AreaChart
-            title={t('dashboard.chart.areaTier')}
-            hint={t('dashboard.chart.areaTierHint')}
-            labels={areaTier.labels}
-            tipLabels={tipLabels}
-            series={areaTier.series}
-            stacked
-            height={220}
-          />
-          <AreaChart
-            title={t('dashboard.chart.areaByService')}
-            hint={t('dashboard.chart.areaByServiceHint')}
-            labels={areaByService.labels}
-            tipLabels={tipLabels}
-            series={areaByService.series}
-            stacked
-            height={240}
-          />
+        <h3>Lịch tàu cập bến theo cầu (Berth Schedule)</h3>
+        <p className="hint">
+          Trục ngang = thời gian trong tuần (T2→CN) · Trục dọc = vị trí cầu bến (m từ thượng lưu)
+          · Chiều cao ô = LOA tàu · Màu đỏ đứt = vùng chồng đề
+        </p>
+        <MiniGantt blocks={ops.motherBlocks} quayLength={terminal.quayLength} colorMap={colorMap} t={t} />
+      </section>
+
+      {/* ── Chỉ số khai thác cầu bến + thiết bị + sản lượng ── */}
+      <section className="panel span-4">
+        <h3>Thông số cầu bến</h3>
+        <div className="dash-metric-list">
+          <div>
+            <span>Giờ-mét khả dụng</span>
+            <strong>{fmt(k.availableMh, 0)}</strong>
+          </div>
+          <div>
+            <span>Giờ-mét proforma</span>
+            <strong>{fmt(k.proformaMh, 0)}</strong>
+          </div>
+          <div>
+            <span>Giờ-mét mất do bảo trì/khóa</span>
+            <strong>{fmt(k.lockLostMh, 0)}</strong>
+          </div>
+          <div>
+            <span>Chiếm dụng cầu TB</span>
+            <strong>{fmt(k.avgOccupation, 0)} m</strong>
+          </div>
         </div>
       </section>
 
+      <section className="panel span-4">
+        <h3>Thông số thiết bị</h3>
+        <div className="dash-metric-list">
+          <div>
+            <span>Hệ số sử dụng cẩu STS</span>
+            <strong className={k.stsUtilization > 1 ? 'danger' : ''}>{pct(k.stsUtilization)}</strong>
+          </div>
+          <div>
+            <span>Hệ số sử dụng bãi CY</span>
+            <strong className={k.cyUtilization > 1 ? 'danger' : ''}>{pct(k.cyUtilization)}</strong>
+          </div>
+          <div>
+            <span>Số cẩu STS hiệu dụng</span>
+            <strong>{fmt(k.craneCount, 0)}</strong>
+          </div>
+          <div>
+            <span>Năng lực cẩu STS/năm</span>
+            <strong>{fmt(k.stsCapacityYear, 0)}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="panel span-4">
+        <h3>Sản lượng kỳ</h3>
+        <div className="dash-metric-list">
+          <div>
+            <span>Tổng sản lượng thực tế</span>
+            <strong>{fmt(k.totalMoves, 0)}</strong>
+          </div>
+          <div>
+            <span>Chênh lệch Thực/Proforma</span>
+            <strong className={k.varianceMoves >= 0 ? 'ok' : 'danger'}>
+              {k.varianceMoves >= 0 ? '+' : ''}{fmt(k.varianceMoves, 0)}
+            </strong>
+          </div>
+          <div>
+            <span>Hệ số kỳ phân tích</span>
+            <strong>×{fmt(dash.weeksInPeriod, 2)}</strong>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Đồ thị xu thế: Sản lượng + Giờ-mét (2 cột) ── */}
       <section className="panel span-6">
-        <h3>{t('dashboard.chart.customersTitle')}</h3>
-        <p className="hint">{t('dashboard.chart.customersHint')}</p>
+        <AreaChart
+          title="Xu thế sản lượng tích lũy"
+          hint="Sản lượng moves tích lũy theo ngày/tuần trong kỳ phân tích"
+          labels={areaVolume.labels}
+          tipLabels={tipLabels}
+          series={areaVolume.series}
+        />
+      </section>
+      <section className="panel span-6">
+        <AreaChart
+          title="Xu thế giờ-mét chiếm dụng (MH)"
+          hint="Tổng giờ-mét chiếm dụng cầu bến và tải trọng vận hành theo thời gian"
+          labels={areaMh.labels}
+          tipLabels={tipLabels}
+          series={areaMh.series}
+        />
+      </section>
+
+      {/* ── Đồ thị xu thế: Theo nhóm KH + Theo tuyến dịch vụ (2 cột) ── */}
+      <section className="panel span-6">
+        <AreaChart
+          title="Sản lượng theo nhóm khách hàng"
+          hint="Phân bổ sản lượng tích lũy theo nhóm: Lớn / Vừa / Nhỏ"
+          labels={areaTier.labels}
+          tipLabels={tipLabels}
+          series={areaTier.series}
+          stacked
+          height={220}
+        />
+      </section>
+      <section className="panel span-6">
+        <AreaChart
+          title="Sản lượng theo tuyến dịch vụ"
+          hint="Phân bổ sản lượng tích lũy theo từng tuyến/service"
+          labels={areaByService.labels}
+          tipLabels={tipLabels}
+          series={areaByService.series}
+          stacked
+          height={220}
+        />
+      </section>
+
+      {/* ── Cơ cấu khách hàng + So sánh sản lượng (2 cột) ── */}
+      <section className="panel span-6">
+        <h3>Cơ cấu khách hàng theo nhóm</h3>
+        <p className="hint">Phân loại dịch vụ theo thị phần sản lượng</p>
         <TierDonut tiers={tiers} t={t} />
         <div className="tier-cards">
           {['large', 'medium', 'small'].map((id) => {
@@ -687,9 +1005,7 @@ export default function Dashboard({ model }) {
             return (
               <div key={id} className={`tier-card tier-${id}`}>
                 <strong>{t(`dashboard.tier.${id}`)}</strong>
-                <span>
-                  {tier.services} {t('dashboard.chart.svc')}
-                </span>
+                <span>{tier.services} tuyến</span>
                 <em>{fmt(tier.expectedMoves, 0)} moves</em>
                 <small>{tier.members.join(', ') || '—'}</small>
               </div>
@@ -699,94 +1015,30 @@ export default function Dashboard({ model }) {
       </section>
 
       <section className="panel span-6">
-        <h3>{t('dashboard.chart.volumeCompare')}</h3>
-        <p className="hint">{t('dashboard.chart.volumeCompareHint')}</p>
+        <h3>So sánh sản lượng theo tuyến</h3>
+        <p className="hint">Thực tế vs Proforma và mức chiếm dụng giờ-mét theo tuyến dịch vụ</p>
         <VolumeCompareChart rows={dash.byService} colorMap={colorMap} t={t} />
+        <div style={{ marginTop: '1rem' }}>
+          <OccupationChart rows={dash.byService} colorMap={colorMap} t={t} />
+        </div>
       </section>
 
+      {/* ── Strategy Panels (BOR analysis, heatmap…) ── */}
+      <StrategyPanels berth={dash.berth} ops={ops} />
+
+      {/* ── Bảng chi tiết dịch vụ ── */}
       <section className="panel span-12">
-        <h3>{t('dashboard.chart.occupation')}</h3>
-        <p className="hint">{t('dashboard.chart.occupationHint')}</p>
-        <OccupationChart rows={dash.byService} colorMap={colorMap} t={t} />
-      </section>
-
-      <section className="panel span-4">
-        <h3>{t('dashboard.section.berth')}</h3>
-        <div className="dash-metric-list">
-          <div>
-            <span>{t('dashboard.kpi.availableMh')}</span>
-            <strong>{fmt(k.availableMh, 0)}</strong>
-          </div>
-          <div>
-            <span>{t('dashboard.kpi.proformaMh')}</span>
-            <strong>{fmt(k.proformaMh, 0)}</strong>
-          </div>
-          <div>
-            <span>{t('dashboard.kpi.lockLostMh')}</span>
-            <strong>{fmt(k.lockLostMh, 0)}</strong>
-          </div>
-          <div>
-            <span>{t('dashboard.kpi.avgOccupation')}</span>
-            <strong>{fmt(k.avgOccupation, 0)} m</strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel span-4">
-        <h3>{t('dashboard.section.equipment')}</h3>
-        <div className="dash-metric-list">
-          <div>
-            <span>{t('dashboard.kpi.stsUtil')}</span>
-            <strong className={k.stsUtilization > 1 ? 'danger' : ''}>{pct(k.stsUtilization)}</strong>
-          </div>
-          <div>
-            <span>{t('dashboard.kpi.cyUtil')}</span>
-            <strong className={k.cyUtilization > 1 ? 'danger' : ''}>{pct(k.cyUtilization)}</strong>
-          </div>
-          <div>
-            <span>{t('dashboard.kpi.craneCount')}</span>
-            <strong>{fmt(k.craneCount, 0)}</strong>
-          </div>
-          <div>
-            <span>{t('dashboard.kpi.stsCapacity')}</span>
-            <strong>{fmt(k.stsCapacityYear, 0)}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel span-4">
-        <h3>{t('dashboard.section.volume')}</h3>
-        <div className="dash-metric-list">
-          <div>
-            <span>{t('dashboard.kpi.totalMoves')}</span>
-            <strong>{fmt(k.totalMoves, 0)}</strong>
-          </div>
-          <div>
-            <span>{t('dashboard.kpi.variance')}</span>
-            <strong className={k.varianceMoves >= 0 ? 'ok' : 'danger'}>
-              {k.varianceMoves >= 0 ? '+' : ''}
-              {fmt(k.varianceMoves, 0)}
-            </strong>
-          </div>
-          <div>
-            <span>{t('dashboard.periodNote')}</span>
-            <strong>×{fmt(dash.weeksInPeriod, 2)}</strong>
-          </div>
-        </div>
-      </section>
-
-      <section className="panel span-12">
-        <h3>{t('dashboard.section.byService')}</h3>
+        <h3>Chi tiết theo tuyến dịch vụ</h3>
         <div className="table-wrap touch-scroll">
           <table className="data-table">
             <thead>
               <tr>
-                <th>{t('capacity.th.color')}</th>
-                <th>{t('capacity.th.service')}</th>
-                <th>{t('dashboard.col.tier')}</th>
-                <th>{t('dashboard.col.proforma')}</th>
-                <th>{t('dashboard.col.expected')}</th>
-                <th>{t('dashboard.col.share')}</th>
+                <th>Màu</th>
+                <th>Tuyến dịch vụ</th>
+                <th>Nhóm KH</th>
+                <th>Proforma (Moves)</th>
+                <th>Thực tế (Moves)</th>
+                <th>Thị phần</th>
               </tr>
             </thead>
             <tbody>
@@ -821,43 +1073,6 @@ export default function Dashboard({ model }) {
         </div>
       </section>
 
-      <section className="panel span-12">
-        <h3>{t('dashboard.section.calls')}</h3>
-        <div className="table-wrap touch-scroll">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>{t('capacity.th.service')}</th>
-                <th>{t('window.vesselName')}</th>
-                <th>{t('capacity.th.etb')}</th>
-                <th>{t('window.proformaVolume')}</th>
-                <th>{t('window.expectedVolume')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {calls.map((c) => {
-                const color = colorMap.get(String(c.service).trim().toUpperCase()) || METRIC_COLORS.expected;
-                return (
-                  <tr key={c.id}>
-                    <td>
-                      <strong style={{ color }}>
-                        <i className="svc-dot" style={{ background: color }} />
-                        {c.service}
-                      </strong>
-                    </td>
-                    <td>{c.vesselName || '—'}</td>
-                    <td>
-                      {t(`days.${c.etbDay}`)} {c.etbTime}
-                    </td>
-                    <td>{fmt(c.proformaMoves, 0)}</td>
-                    <td>{fmt(c.expectedMoves, 0)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }

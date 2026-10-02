@@ -546,7 +546,7 @@ function MiniGantt({ blocks, quayLength, colorMap, t }) {
                 {i % 2 === 1 && <rect x={x} y={0} width={dayW} height={svgH - 16} fill="rgba(30,58,85,0.15)" />}
                 <line x1={x} y1={0} x2={x} y2={svgH - 16} stroke="rgba(30,58,85,0.5)" strokeWidth="1" />
                 <text x={x + dayW / 2} y={svgH - 4} textAnchor="middle" style={{ fontSize: 9, fill: 'var(--muted)' }}>
-                  {t(`days.${day}`)}
+                  {t(`days.${String(day || "").toLowerCase()}`)}
                 </text>
               </g>
             );
@@ -588,8 +588,8 @@ function MiniGantt({ blocks, quayLength, colorMap, t }) {
             const color = colorMap.get(String(c.service || '').trim().toUpperCase()) || '#0e7490';
 
             const vName = (c.vesselName || c.service || '').replace(/^MV\s+/i, '');
-            const etbStr = t(`days.${c.etbDay}`) + ' ' + (c.etbTime || '');
-            const etdStr = t(`days.${c.etdDay}`) + ' ' + (c.etdTime || '');
+            const etbStr = t(`days.${String(c.etbDay || "").toLowerCase()}`) + ' ' + (c.etbTime || '');
+            const etdStr = t(`days.${String(c.etdDay || "").toLowerCase()}`) + ' ' + (c.etdTime || '');
 
             const lineH = 10;
             const lines = [
@@ -721,23 +721,23 @@ export default function Dashboard({ model }) {
   const ts = dash.timeSeries || [];
 
   const axisLabels = useMemo(() => {
-    if (period === 'week') return ts.map((d) => t(`days.${d.key}`));
+    if (period === 'week') return ts.map((d) => t(`days.${String(d.key || "").toLowerCase()}`));
     if (period === 'month') {
       return ts.map((d, i) => {
         const [week, day] = String(d.key).split('-');
         if (!day || i % 7 !== 0) return '';
-        return t('dashboard.weekShort', { n: week, day: t(`days.${day}`) });
+        return t('dashboard.weekShort', { n: week, day: t(`days.${String(day || "").toLowerCase()}`) });
       });
     }
     return ts.map((d, i) => (i % Math.max(1, Math.ceil(ts.length / 6)) === 0 ? d.key : ''));
   }, [ts, period, t]);
 
   const tipLabels = useMemo(() => {
-    if (period === 'week') return ts.map((d) => t(`daysFull.${d.key}`));
+    if (period === 'week') return ts.map((d) => t(`daysFull.${String(d.key || "").toLowerCase()}`));
     if (period === 'month') {
       return ts.map((d) => {
         const [week, day] = String(d.key).split('-');
-        return t('dashboard.weekShort', { n: week, day: t(`daysFull.${day}`) });
+        return t('dashboard.weekShort', { n: week, day: t(`daysFull.${String(day || "").toLowerCase()}`) });
       });
     }
     return ts.map((d) => d.key);
